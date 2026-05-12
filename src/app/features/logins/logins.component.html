@@ -1,0 +1,150 @@
+<div class="login-page">
+    <!-- Top decorative bar -->
+    <div class="login-page__top-bar"></div>
+
+    <!-- Header nav -->
+    <header class="login-page__nav">
+        <div class="login-page__nav-brand">
+            <div class="login-page__nav-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                </svg>
+            </div>
+            <span class="login-page__nav-name">NotifyAdmin</span>
+        </div>
+        <nav class="login-page__nav-links">
+            <a href="#" class="login-page__nav-link">Solutions</a>
+            <a href="#" class="login-page__nav-link">Pricing</a>
+            <a href="#" class="login-page__nav-link">Documentation</a>
+            <button class="login-page__nav-cta">Get Started</button>
+        </nav>
+    </header>
+
+    <!-- Main content -->
+    <main class="login-page__main">
+        <!-- Dot grid background -->
+        <div class="login-page__bg-grid"></div>
+
+        <!-- Login card -->
+        <div class="login-card animate-fade-in-up">
+            <!-- Card Header -->
+            <div class="login-card__header">
+                <div class="login-card__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                    </svg>
+                </div>
+                <h1 class="login-card__title">Welcome Back</h1>
+                <p class="login-card__subtitle">Sign in to your dashboard</p>
+            </div>
+
+            <!-- Card Body -->
+            <div class="login-card__body">
+                <!-- Google Sign In -->
+                <button class="login-card__google-btn" (click)="signInWithGoogle()">
+                    <svg height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M17.64 9.20455C17.64 8.56636 17.5827 7.95273 17.4764 7.36364H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.20455Z"
+                            fill="#4285F4" />
+                        <path
+                            d="M9 18C11.43 18 13.4673 17.1941 14.9564 15.8195L12.0477 13.5614C11.2418 14.1014 10.2109 14.4205 9 14.4205C6.65591 14.4205 4.67182 12.8373 3.96409 10.71H1.02273V12.9927C2.51182 15.9532 5.56773 18 9 18Z"
+                            fill="#34A853" />
+                        <path
+                            d="M3.96409 10.71C3.78409 10.17 3.68182 9.59318 3.68182 9C3.68182 8.40682 3.78409 7.83 3.96409 7.29V5.00727H1.02273C0.413182 6.21 0 7.56818 0 9C0 10.4318 0.413182 11.79 1.02273 12.9927L3.96409 10.71Z"
+                            fill="#FBBC05" />
+                        <path
+                            d="M9 3.57955C10.3214 3.57955 11.5077 4.03364 12.4405 4.92545L15.0218 2.34409C13.4632 0.891818 11.4259 0 9 0C5.56773 0 2.51182 2.04682 1.02273 5.00727L3.96409 7.29C4.67182 5.16273 6.65591 3.57955 9 3.57955Z"
+                            fill="#EA4335" />
+                    </svg>
+                    Sign in with Google
+                </button>
+
+                <!-- Divider -->
+                <div class="login-card__divider">
+                    <div class="login-card__divider-line"></div>
+                    <span class="login-card__divider-text">or continue with email</span>
+                    <div class="login-card__divider-line"></div>
+                </div>
+
+                <!-- Form -->
+                <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-card__form">
+                    <!-- Username -->
+                    <div class="login-card__field">
+                        <label class="login-card__label">Username</label>
+                        <input type="email" formControlName="email" class="login-card__input"
+                            [class.login-card__input--error]="isFieldInvalid('email')" placeholder="name@company.com" />
+                        <span *ngIf="isFieldInvalid('email')" class="login-card__error">Please enter a valid
+                            email</span>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="login-card__field">
+                        <label class="login-card__label">Password</label>
+                        <input type="password" formControlName="password" class="login-card__input"
+                            [class.login-card__input--error]="isFieldInvalid('password')" placeholder="••••••••" />
+                        <span *ngIf="isFieldInvalid('password')" class="login-card__error">Password is required</span>
+                    </div>
+
+                    <!-- Remember Me / Forgot -->
+                    <div class="login-card__extras">
+                        <label class="login-card__remember" (click)="toggleRemember()">
+                            <div class="login-card__checkbox" [class.login-card__checkbox--checked]="rememberMe">
+                                <svg *ngIf="rememberMe" xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                            </div>
+                            <span>Remember me</span>
+                        </label>
+                        <a href="#" class="login-card__forgot">Forgot password?</a>
+                    </div>
+
+                    <!-- Error message -->
+                    <div *ngIf="errorMessage" class="login-card__alert">{{ errorMessage }}</div>
+
+                    <!-- Submit -->
+                    <button type="submit" class="login-card__submit" [disabled]="isLoading">
+                        <span *ngIf="!isLoading" class="login-card__submit-text">
+                            Sign In
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M5 12h14" />
+                                <path d="m12 5 7 7-7 7" />
+                            </svg>
+                        </span>
+                        <span *ngIf="isLoading" class="login-card__spinner"></span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Card Footer -->
+            <footer class="login-card__footer">
+                <p>Manage your notification campaigns efficiently</p>
+                <div class="login-card__footer-links">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                </div>
+            </footer>
+        </div>
+    </main>
+
+    <!-- Global Footer -->
+    <footer class="login-page__footer">
+        <div class="login-page__footer-brand">
+            <span class="login-page__footer-name">NotifyAdmin Ops</span>
+            <span class="login-page__footer-copy">© 2024 NotifyAdmin. All rights reserved.</span>
+        </div>
+        <div class="login-page__footer-links">
+            <a href="#">Status</a>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms</a>
+            <a href="#">API Docs</a>
+        </div>
+    </footer>
+</div>
