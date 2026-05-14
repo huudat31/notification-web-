@@ -18,10 +18,10 @@ import {
   timeout,
   retry,
 } from 'rxjs';
-import { AuthStore } from '../../domain/state/auth.store';
-import { AuthApiService } from '../api/auth-api.service';
-import { TokenStorageService } from '../storage/token.storage';
-import { LoggerService } from '../../../services/logger.service';
+import { AuthStore } from '../../features/auth/state/auth.store';
+import { AuthApiService } from '../../features/auth/infrastructure/api/auth-api.service';
+import { TokenStorageService } from '../../features/auth/infrastructure/storage/token.storage';
+import { LoggerService } from '../services/logger.service';
 
 let isRefreshing = false;
 const refreshSubject = new BehaviorSubject<string | null>(null);
@@ -83,15 +83,11 @@ function handle401Error(
       timeout(10_000),
       retry({ count: 1, delay: 1_000 }),
 
-      switchMap((response) => {
+      switchMap((response: any) => {
         isRefreshing = false;
-
         authStore.setAuth(response.user, response.accessToken);
-
         tokenStorage.saveRefreshToken(response.refreshToken);
-
         refreshSubject.next(response.accessToken);
-
         logger.log('REFRESH_SUCCESS', { userId: response.user?.id ?? '' });
 
         return next(req.clone({
@@ -102,14 +98,11 @@ function handle401Error(
       catchError((err: unknown) => {
         isRefreshing = false;
         refreshSubject.next(null);
-
         const status = err instanceof HttpErrorResponse ? err.status : 'timeout';
         logger.log('REFRESH_FAILED', { status: String(status) });
-
         authStore.reset();
         tokenStorage.clearAll();
         void router.navigate(['/login']);
-
         return throwError(() => err);
       }),
     ) as Observable<HttpEvent<unknown>>;

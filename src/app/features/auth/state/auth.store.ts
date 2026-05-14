@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { User } from '../models/auth.model';
+import { User } from '../domain/models/auth.model';
 
 export interface AuthState {
   user: User | null;

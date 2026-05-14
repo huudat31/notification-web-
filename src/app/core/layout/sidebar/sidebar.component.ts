@@ -2,7 +2,7 @@ import { Component, inject, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer } from '@angular/platform-browser';
-import { AuthFacade } from '../../core/auth/application/facade/auth.facade';
+import { AuthFacade } from '../../../features/auth/application/facade/auth.facade';
 
 interface NavItem {
   label: string;

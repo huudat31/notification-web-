@@ -1,8 +1,8 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, inject, NgZone } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { AuthFacade } from '../../core/auth/application/facade/auth.facade';
-import { environment } from '../../../environments/environment';
+import { AuthFacade } from '../application/facade/auth.facade';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-logins',
@@ -45,7 +45,6 @@ export class LoginsComponent implements OnInit, AfterViewInit, OnDestroy {
       google.accounts.id.cancel();
     }
   }
-
 
   private initGoogleSignIn(): void {
     if ((window as any).google?.accounts?.id) {
@@ -101,7 +100,6 @@ export class LoginsComponent implements OnInit, AfterViewInit, OnDestroy {
       this.pollIntervalId = null;
     }
   }
-
 
   isFieldInvalid(field: string): boolean {
     const control = this.loginForm.get(field);

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { AuthFacade } from './core/auth/application/facade/auth.facade';
+import { AuthFacade } from './features/auth/application/facade/auth.facade';
 import { BroadcastService } from './core/services/broadcast.service';
 
 @Component({

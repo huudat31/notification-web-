@@ -5,12 +5,12 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { routes } from './app.routes';
 
 // ─── Interceptors (thứ tự quan trọng!) ───────────────────────────────────
-import { errorInterceptor } from './core/auth/infrastructure/interceptors/error.interceptor';
-import { authTokenInterceptor } from './core/auth/infrastructure/interceptors/auth-token.interceptor';
-import { refreshInterceptor } from './core/auth/infrastructure/interceptors/refresh.interceptor';
+import { errorInterceptor } from './core/interceptors/error.interceptor';
+import { authTokenInterceptor } from './core/interceptors/auth-token.interceptor';
+import { refreshInterceptor } from './core/interceptors/refresh.interceptor';
 
 // ─── Facade ───────────────────────────────────────────────────────────────
-import { AuthFacade } from './core/auth/application/facade/auth.facade';
+import { AuthFacade } from './features/auth/application/facade/auth.facade';
 
 export function initializeApp(authFacade: AuthFacade) {
   return (): Promise<void> => authFacade.initializeAuth();

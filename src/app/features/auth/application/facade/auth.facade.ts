@@ -2,11 +2,11 @@ import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of, firstValueFrom, throwError } from 'rxjs';
 import { tap, catchError, finalize, timeout } from 'rxjs/operators';
-import { AuthStore } from '../../domain/state/auth.store';
+import { AuthStore } from '../../state/auth.store';
 import { AuthApiService } from '../../infrastructure/api/auth-api.service';
 import { TokenStorageService } from '../../infrastructure/storage/token.storage';
-import { BroadcastService } from '../../../services/broadcast.service';
-import { LoggerService } from '../../../services/logger.service';
+import { BroadcastService } from '../../../../core/services/broadcast.service';
+import { LoggerService } from '../../../../core/services/logger.service';
 import { AuthResponse, GoogleLoginRequest } from '../../domain/models/auth.model';
 
 @Injectable({ providedIn: 'root' })
@@ -25,20 +25,9 @@ export class AuthFacade {
   readonly currentUser = this.authStore.user;
   readonly error = this.authStore.error;
 
-  /**
-   * APP_INITIALIZER — Khôi phục session sau reload.
-   *
-   * Flow:
-   *   1. Đọc refreshToken từ sessionStorage
-   *   2. Nếu không có → chưa login, setInitialized(true) và return
-   *   3. Nếu có → gọi /auth/refresh với {refreshToken, deviceId}
-   *   4. Nhận accessToken + refreshToken mới → lưu cả hai
-   *   5. Luôn setInitialized(true) dù thành công hay thất bại
-   */
   async initializeAuth(): Promise<void> {
     const refreshToken = this.tokenStorage.getRefreshToken();
 
-    // Không có refresh token → chưa login, không cần refresh
     if (!refreshToken) {
       this.authStore.setInitialized(true);
       return;
@@ -50,7 +39,6 @@ export class AuthFacade {
         this.authApi.refreshToken({ refreshToken, deviceId }).pipe(
           timeout(10_000),
           catchError((err) => {
-            // Refresh token hết hạn hoặc invalid → clear và tiếp tục
             this.tokenStorage.clearRefreshToken();
             this.logger.log('REFRESH_FAILED', { source: 'APP_INIT' });
             return of(null);
@@ -59,21 +47,15 @@ export class AuthFacade {
       );
 
       if (response) {
-        // Lưu accessToken vào memory + refreshToken mới vào sessionStorage (rotation)
         this.authStore.setAuth(response.user, response.accessToken);
         this.tokenStorage.saveRefreshToken(response.refreshToken);
         this.logger.log('REFRESH_SUCCESS', { source: 'APP_INIT' });
       }
     } finally {
-      // Luôn set initialized dù thành công hay thất bại → tránh white screen
       this.authStore.setInitialized(true);
     }
   }
 
-  /**
-   * Google Login.
-   * Sau login: lưu accessToken vào memory, refreshToken vào sessionStorage.
-   */
   loginWithGoogle(idToken: string): Observable<AuthResponse> {
     this.authStore.setLoading(true);
     this.authStore.setError(null);
