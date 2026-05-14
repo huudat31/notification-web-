@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/auth/guards/auth.guard';
+import { authGuard } from './core/auth/presentation/guards/auth.guard';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { LoginsComponent } from './features/logins/logins.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
@@ -8,13 +8,11 @@ import { CreateCampaignComponent } from './features/create_campaign/create-campa
 import { SettingsComponent } from './features/settings/settings.component';
 
 export const routes: Routes = [
-  // Login - standalone (no layout)
   {
     path: 'login',
-    component: LoginsComponent
+    component: LoginsComponent,
   },
 
-  // Protected routes inside MainLayout
   {
     path: '',
     component: MainLayoutComponent,
@@ -25,9 +23,8 @@ export const routes: Routes = [
       { path: 'notifications', component: NotificationsComponent },
       { path: 'campaigns', component: CreateCampaignComponent },
       { path: 'settings', component: SettingsComponent },
-    ]
+    ],
   },
 
-  // Fallback
-  { path: '**', redirectTo: '' }
+  { path: '**', redirectTo: '' },
 ];

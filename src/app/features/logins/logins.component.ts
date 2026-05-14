@@ -1,10 +1,7 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, inject, NgZone } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { AuthService } from '../../core/auth/services/auth.service';
-import { AuthStore } from '../../core/auth/store/auth.store';
-import { TokenStorageService } from '../../core/storage/token.storage';
+import { AuthFacade } from '../../core/auth/application/facade/auth.facade';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -15,16 +12,15 @@ import { environment } from '../../../environments/environment';
   styleUrl: './logins.component.css',
 })
 export class LoginsComponent implements OnInit, AfterViewInit, OnDestroy {
-  private fb = inject(FormBuilder);
-  private router = inject(Router);
-  private authService = inject(AuthService);
-  private authStore = inject(AuthStore);
-  private ngZone = inject(NgZone);
+  private readonly fb = inject(FormBuilder);
+  private readonly authFacade = inject(AuthFacade);
+  private readonly ngZone = inject(NgZone);
 
   loginForm: FormGroup;
   rememberMe = false;
-  isLoading = this.authStore.isLoading;
-  errorMessage = this.authStore.error;
+
+  readonly isLoading = this.authFacade.isLoading;
+  readonly errorMessage = this.authFacade.error;
 
   private googleInitialized = false;
   private pollIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -32,13 +28,11 @@ export class LoginsComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor() {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.required, Validators.minLength(6)]],
     });
   }
 
-  ngOnInit(): void {
-    // Không còn check localStorage ở đây
-  }
+  ngOnInit(): void { /* no-op */ }
 
   ngAfterViewInit(): void {
     this.initGoogleSignIn();
@@ -51,6 +45,7 @@ export class LoginsComponent implements OnInit, AfterViewInit, OnDestroy {
       google.accounts.id.cancel();
     }
   }
+
 
   private initGoogleSignIn(): void {
     if ((window as any).google?.accounts?.id) {
@@ -69,7 +64,6 @@ export class LoginsComponent implements OnInit, AfterViewInit, OnDestroy {
       } else if (attempts >= maxAttempts) {
         this.clearPollInterval();
         this.ngZone.run(() => {
-          this.authStore.setError('Không thể tải Google Sign-In. Vui lòng tải lại trang.');
         });
       }
     }, 200);
@@ -85,10 +79,10 @@ export class LoginsComponent implements OnInit, AfterViewInit, OnDestroy {
       client_id: environment.googleClientId,
       callback: (response: any) => {
         this.ngZone.run(() => {
-          this.authService.loginGoogleAdmin(response.credential).subscribe();
+          this.authFacade.loginWithGoogle(response.credential).subscribe();
         });
       },
-      use_fedcm_for_prompt: false
+      use_fedcm_for_prompt: false,
     });
 
     const container = document.getElementById('google-btn-container');
@@ -96,7 +90,7 @@ export class LoginsComponent implements OnInit, AfterViewInit, OnDestroy {
       google.accounts.id.renderButton(container, {
         theme: 'outline',
         size: 'large',
-        width: container.offsetWidth || 340
+        width: container.offsetWidth || 340,
       });
     }
   }
@@ -107,6 +101,7 @@ export class LoginsComponent implements OnInit, AfterViewInit, OnDestroy {
       this.pollIntervalId = null;
     }
   }
+
 
   isFieldInvalid(field: string): boolean {
     const control = this.loginForm.get(field);
@@ -120,7 +115,6 @@ export class LoginsComponent implements OnInit, AfterViewInit, OnDestroy {
   onSubmit(): void {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
-      return;
     }
   }
 }

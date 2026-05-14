@@ -1,9 +1,8 @@
-import { Component, OnInit, inject, computed } from '@angular/core';
-import { RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { Component, inject, computed } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer } from '@angular/platform-browser';
-import { AuthService } from '../../core/auth/services/auth.service';
-import { AuthStore } from '../../core/auth/store/auth.store';
+import { AuthFacade } from '../../core/auth/application/facade/auth.facade';
 
 interface NavItem {
   label: string;
@@ -16,9 +15,13 @@ interface NavItem {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './sidebar.component.html',
-  styleUrls: ['./sidebar.component.css']
+  styleUrls: ['./sidebar.component.css'],
 })
-export class SidebarComponent implements OnInit {
+export class SidebarComponent {
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly authFacade = inject(AuthFacade);
+  readonly user = this.authFacade.currentUser;
+
   navItems: NavItem[] = [
     {
       label: 'Dashboard',
@@ -56,27 +59,15 @@ export class SidebarComponent implements OnInit {
     },
   ];
 
-  private sanitizer = inject(DomSanitizer);
-  user = this.authStore.user;
-
-  constructor(
-    private router: Router,
-    private authService: AuthService,
-    private authStore: AuthStore
-  ) { }
-
-  sanitizedNavItems = computed(() => {
-    return this.navItems.map(item => ({
+  sanitizedNavItems = computed(() =>
+    this.navItems.map(item => ({
       ...item,
-      safeIcon: this.sanitizer.bypassSecurityTrustHtml(item.iconPath)
-    }));
-  });
-
-  ngOnInit(): void {
-  }
+      safeIcon: this.sanitizer.bypassSecurityTrustHtml(item.iconPath),
+    }))
+  );
 
   logout(): void {
-    this.authService.logout();
+    this.authFacade.logout();
   }
 
   get userInitials(): string {
