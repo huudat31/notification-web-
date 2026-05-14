@@ -15,9 +15,9 @@
 
     <!-- Navigation -->
     <nav class="sidebar__nav">
-        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="sidebar__nav-item--active"
-            class="sidebar__nav-item">
-            <span class="sidebar__nav-icon" [innerHTML]="item.iconPath"></span>
+        <a *ngFor="let item of sanitizedNavItems()" [routerLink]="item.route"
+            routerLinkActive="sidebar__nav-item--active" class="sidebar__nav-item">
+            <span class="sidebar__nav-icon" [innerHTML]="item.safeIcon"></span>
             <span class="sidebar__nav-label">{{ item.label }}</span>
         </a>
     </nav>
@@ -26,10 +26,10 @@
     <div class="sidebar__footer">
         <!-- User Card -->
         <div class="sidebar__user-card">
-            <div class="sidebar__user-avatar">JD</div>
+            <div class="sidebar__user-avatar">{{ userInitials }}</div>
             <div class="sidebar__user-info">
-                <span class="sidebar__user-name">Jane Doe</span>
-                <span class="sidebar__user-role">Admin</span>
+                <span class="sidebar__user-name">{{ user()?.name || 'Jane Doe' }}</span>
+                <span class="sidebar__user-role">{{ user()?.role || 'Admin' }}</span>
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" class="sidebar__chevron">

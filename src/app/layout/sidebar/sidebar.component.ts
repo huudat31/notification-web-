@@ -1,6 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer } from '@angular/platform-browser';
+import { AuthService } from '../../core/auth/services/auth.service';
+import { AuthStore } from '../../core/auth/store/auth.store';
 
 interface NavItem {
   label: string;
@@ -53,12 +56,34 @@ export class SidebarComponent implements OnInit {
     },
   ];
 
-  constructor(private router: Router) { }
+  private sanitizer = inject(DomSanitizer);
+  user = this.authStore.user;
 
-  ngOnInit(): void { }
+  constructor(
+    private router: Router,
+    private authService: AuthService,
+    private authStore: AuthStore
+  ) { }
+
+  sanitizedNavItems = computed(() => {
+    return this.navItems.map(item => ({
+      ...item,
+      safeIcon: this.sanitizer.bypassSecurityTrustHtml(item.iconPath)
+    }));
+  });
+
+  ngOnInit(): void {
+  }
 
   logout(): void {
-    localStorage.removeItem('auth_token');
-    this.router.navigate(['/login']);
+    this.authService.logout();
+  }
+
+  get userInitials(): string {
+    const user = this.user();
+    if (user?.name) {
+      return user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+    }
+    return 'JD';
   }
 }
