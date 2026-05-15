@@ -4,7 +4,9 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractContro
 import { Router } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, filter, switchMap, takeUntil, tap, of, catchError } from 'rxjs';
 import { CampaignApiService } from '../infrastructure/api/campaign-api.service';
-import { CreateCampaignRequest, TemplatePreviewResponse } from '../domain/models/campaign.model';
+import { CreateCampaignRequest, TemplatePreviewResponse, CampaignTemplate } from '../domain/models/campaign.model';
+import { TemplatePickerOverlayComponent } from './components/template-picker-overlay/template-picker-overlay.component';
+import { ToastService } from '../../../core/services/toast.service';
 
 // Custom Validator for scheduledTime > currentTime
 export function futureDateTimeValidator(): ValidatorFn {
@@ -26,7 +28,7 @@ export function futureDateTimeValidator(): ValidatorFn {
 @Component({
   selector: 'app-create-campaign',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TemplatePickerOverlayComponent],
   templateUrl: './create-campaign.component.html',
   styleUrls: ['./create_campaign.component.css'],
 })
@@ -34,11 +36,14 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly campaignApi = inject(CampaignApiService);
+  private readonly toast = inject(ToastService);
 
   previewTab: 'push' | 'email' = 'push';
   isSubmitting = false;
   campaignForm: FormGroup;
 
+  // Template Logic
+  isTemplatePickerOpen = false;
   templatePreview: TemplatePreviewResponse | null = null;
   isLoadingPreview = false;
   minTime: string | null = null;
@@ -59,14 +64,13 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
       channel: ['Gửi cả Email & Push'],
       speed: [1000000, [Validators.required, Validators.min(1), Validators.max(1000000)]],
       template: [''],
-      notifTitle: ['', [Validators.required]],
+      notifTitle: ['', [Validators.required, Validators.maxLength(255)]],
       body: ['', [Validators.required]],
       actionUrl: ['', [this.urlValidator]]
     }, { validators: futureDateTimeValidator() });
   }
 
   ngOnInit(): void {
-    this.setupTemplateLogic();
     this.setupDateLogic();
   }
 
@@ -102,48 +106,71 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
     }
   }
 
-  private setupTemplateLogic(): void {
-    const templateControl = this.campaignForm.get('template');
-    const notifTitleControl = this.campaignForm.get('notifTitle');
-    const bodyControl = this.campaignForm.get('body');
-
-    templateControl?.valueChanges.pipe(
-      takeUntil(this.destroy$),
-      debounceTime(500),
-      distinctUntilChanged(),
-      tap(templateName => {
-        if (templateName) {
-          notifTitleControl?.disable();
-          bodyControl?.disable();
-          this.isLoadingPreview = true;
-        } else {
-          notifTitleControl?.enable();
-          bodyControl?.enable();
-          this.templatePreview = null;
-          this.isLoadingPreview = false;
-        }
-      }),
-      filter(templateName => !!templateName),
-      switchMap(templateName => {
-        return this.campaignApi.previewTemplate(templateName).pipe(
-          catchError(() => {
-            // Handle error, maybe show toast
-            return of(null);
-          })
-        );
-      }),
-      tap(previewResponse => {
-        this.isLoadingPreview = false;
-        if (previewResponse) {
-          this.templatePreview = previewResponse;
-        }
-      })
-    ).subscribe();
-  }
-
   isInvalid(f: string): boolean {
     const c = this.campaignForm.get(f);
     return !!(c && c.invalid && (c.dirty || c.touched));
+  }
+
+  openTemplatePicker(): void {
+    this.isTemplatePickerOpen = true;
+  }
+
+  closeTemplatePicker(): void {
+    this.isTemplatePickerOpen = false;
+  }
+
+  onTemplateSelected(template: CampaignTemplate): void {
+    const notifTitleCtrl = this.campaignForm.get('notifTitle');
+    const bodyCtrl = this.campaignForm.get('body');
+
+    // Check if user has manual content
+    const hasManualContent = (notifTitleCtrl?.value && notifTitleCtrl?.enabled) ||
+      (bodyCtrl?.value && bodyCtrl?.enabled);
+
+    if (hasManualContent) {
+      const confirm = window.confirm('Chọn template sẽ ghi đè nội dung bạn đang soạn. Bạn có chắc chắn muốn tiếp tục?');
+      if (!confirm) return;
+    }
+
+    this.applyTemplate(template);
+    this.closeTemplatePicker();
+  }
+
+  private applyTemplate(template: CampaignTemplate): void {
+    const templateCtrl = this.campaignForm.get('template');
+    const notifTitleCtrl = this.campaignForm.get('notifTitle');
+    const bodyCtrl = this.campaignForm.get('body');
+
+    templateCtrl?.setValue(template.templateName);
+
+    notifTitleCtrl?.setValue(template.subject);
+    notifTitleCtrl?.disable();
+
+    bodyCtrl?.setValue(template.content);
+    bodyCtrl?.disable();
+
+    // We can just use the form values for preview now, but keep templatePreview for consistency if needed
+    this.templatePreview = {
+      templateName: template.templateName,
+      subject: template.subject,
+      content: template.content
+    };
+  }
+
+  clearTemplateState(): void {
+    const templateCtrl = this.campaignForm.get('template');
+    const notifTitleCtrl = this.campaignForm.get('notifTitle');
+    const bodyCtrl = this.campaignForm.get('body');
+
+    templateCtrl?.setValue('');
+
+    notifTitleCtrl?.setValue('');
+    notifTitleCtrl?.enable();
+
+    bodyCtrl?.setValue('');
+    bodyCtrl?.enable();
+
+    this.templatePreview = null;
   }
 
   get previewTitle(): string {
@@ -182,13 +209,12 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$),
       tap(() => {
         this.isSubmitting = false;
-        // In real app, trigger toast success here
-        console.log('Campaign created successfully');
+        this.toast.success('Campaign created successfully', 'Your campaign has been scheduled and will be sent accordingly.');
         this.router.navigate(['/notifications']);
       }),
       catchError(error => {
         this.isSubmitting = false;
-        // In real app, trigger toast error here
+        this.toast.error('Failed to create campaign', 'An error occurred while creating your campaign. Please try again.');
         console.error('Failed to create campaign', error);
         return of(null);
       })

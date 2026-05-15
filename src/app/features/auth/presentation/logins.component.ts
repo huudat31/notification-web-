@@ -1,7 +1,7 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, inject, NgZone } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { AuthFacade } from '../application/facade/auth.facade';
+import { AuthFacade } from '../../../core/auth/facade/auth.facade';
 import { environment } from '../../../../environments/environment';
 
 @Component({

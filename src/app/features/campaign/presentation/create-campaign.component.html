@@ -20,20 +20,22 @@
                         <div class="section-label__bar"></div>
                         <span>1. Cấu hình thời gian &amp; đối tượng</span>
                     </div>
-                    <div class="form-field">
-                        <label class="form-label">Tên chiến dịch <span class="required">*</span></label>
-                        <input class="form-input" type="text" formControlName="name"
-                            placeholder="Ví dụ: Khuyến mãi Hè 2026 - Flash Sale"
-                            [class.form-input--error]="isInvalid('name')" />
-                        <span *ngIf="isInvalid('name')" class="form-error">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2.5">
-                                <circle cx="12" cy="12" r="10" />
-                                <line x1="12" y1="8" x2="12" y2="12" />
-                                <line x1="12" y1="16" x2="12.01" y2="16" />
-                            </svg>
-                            Vui lòng nhập tên chiến dịch
-                        </span>
+                    <div class="form-grid-1">
+                        <div class="form-field">
+                            <label class="form-label">Tên chiến dịch <span class="required">*</span></label>
+                            <input class="form-input" type="text" formControlName="name"
+                                placeholder="Ví dụ: Khuyến mãi Hè 2026 - Flash Sale"
+                                [class.form-input--error]="isInvalid('name')" />
+                            <span *ngIf="isInvalid('name')" class="form-error">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                Vui lòng nhập tên chiến dịch
+                            </span>
+                        </div>
                     </div>
                     <div class="form-grid-2">
                         <div class="form-field">
@@ -134,34 +136,59 @@
                         <div class="section-label__bar"></div>
                         <span>2. Nội dung thông báo</span>
                     </div>
-                    <div class="form-field">
-                        <label class="form-label">Template Name <span class="form-optional">(Nếu có)</span></label>
-                        <input class="form-input" type="text" formControlName="template"
-                            placeholder="Tìm kiếm template hoặc bỏ trống để soạn tin mới" />
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">Tiêu đề thông báo</label>
-                        <input class="form-input" type="text" formControlName="notifTitle"
-                            placeholder="Ví dụ: Ưu đãi 50% cho riêng bạn!" />
-                    </div>
-                    <div class="form-field">
-                        <div class="form-label-row">
-                            <label class="form-label">Nội dung tin nhắn</label>
-                            <span class="form-tag">Hỗ trợ Markdown</span>
+                    <div class="form-grid-1">
+                        <div class="form-field">
+                            <label class="form-label">Template Name <span class="form-optional">(Nếu có)</span></label>
+                            <div class="input-icon-wrap" [class.has-value]="campaignForm.get('template')?.value">
+                                <input class="form-input form-input--pointer" type="text" formControlName="template"
+                                    placeholder="Chọn template có sẵn..." readonly (click)="openTemplatePicker()" />
+
+                                <button type="button" class="btn-clear-template"
+                                    *ngIf="campaignForm.get('template')?.value" (click)="clearTemplateState()"
+                                    title="Bỏ chọn template">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+
+                                <button type="button" class="btn-search-template" (click)="openTemplatePicker()"
+                                    title="Tìm template">
+                                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-                        <textarea class="form-textarea" formControlName="body"
-                            placeholder="Nhập nội dung chi tiết của thông báo..."></textarea>
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">Action URL</label>
-                        <div class="input-icon-wrap input-icon-wrap--left">
-                            <svg class="input-icon-left" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                            </svg>
-                            <input class="form-input form-input--pl" type="url" formControlName="actionUrl"
-                                placeholder="https://example.com/promotion" />
+                        <div class="form-field">
+                            <label class="form-label">Tiêu đề thông báo</label>
+                            <input class="form-input" type="text" formControlName="notifTitle"
+                                placeholder="Ví dụ: Ưu đãi 50% cho riêng bạn!" />
+                        </div>
+                        <div class="form-field">
+                            <div class="form-label-row">
+                                <label class="form-label">Nội dung tin nhắn</label>
+                                <span class="form-tag">Hỗ trợ Markdown</span>
+                            </div>
+                            <textarea class="form-textarea" formControlName="body"
+                                placeholder="Nhập nội dung chi tiết của thông báo..."></textarea>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Action URL</label>
+                            <div class="input-icon-wrap input-icon-wrap--left">
+                                <svg class="input-icon-left" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                </svg>
+                                <input class="form-input form-input--pl" type="url" formControlName="actionUrl"
+                                    placeholder="https://example.com/promotion" />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -187,6 +214,10 @@
                     <button class="preview-tab" [class.preview-tab--active]="previewTab === 'email'"
                         (click)="previewTab = 'email'">Email Preview</button>
                 </div>
+
+                <app-template-picker-overlay *ngIf="isTemplatePickerOpen" (close)="closeTemplatePicker()"
+                    (selectTemplate)="onTemplateSelected($event)">
+                </app-template-picker-overlay>
                 <div class="preview-screen">
                     <!-- Push Notification Mockup -->
                     <div class="phone-mock" *ngIf="previewTab === 'push'">

@@ -6,14 +6,14 @@ import { routes } from './app.routes';
 
 // ─── Interceptors (thứ tự quan trọng!) ───────────────────────────────────
 import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { authTokenInterceptor } from './core/interceptors/auth-token.interceptor';
-import { refreshInterceptor } from './core/interceptors/refresh.interceptor';
+import { authTokenInterceptor } from './core/auth/interceptors/auth-token.interceptor';
+import { refreshInterceptor } from './core/auth/interceptors/refresh.interceptor';
 
-// ─── Facade ───────────────────────────────────────────────────────────────
-import { AuthFacade } from './features/auth/application/facade/auth.facade';
+// ─── Initializer ──────────────────────────────────────────────────────────
+import { AuthInitializerService } from './core/auth/initializer/auth.initializer';
 
-export function initializeApp(authFacade: AuthFacade) {
-  return (): Promise<void> => authFacade.initializeAuth();
+export function initializeApp(authInitializer: AuthInitializerService) {
+  return (): Promise<void> => authInitializer.init();
 }
 
 export const appConfig: ApplicationConfig = {
@@ -30,7 +30,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: APP_INITIALIZER,
       useFactory: initializeApp,
-      deps: [AuthFacade],
+      deps: [AuthInitializerService],
       multi: true,
     },
   ],

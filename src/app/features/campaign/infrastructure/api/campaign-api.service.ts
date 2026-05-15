@@ -1,19 +1,80 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { CreateCampaignRequest, TemplatePreviewResponse } from '../../domain/models/campaign.model';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, shareReplay } from 'rxjs';
+import {
+  CreateCampaignRequest,
+  TemplatePreviewResponse,
+  CampaignTemplate,
+  CampaignSearchParams,
+  CampaignSearchResponse,
+  Campaign
+} from '../../domain/models/campaign.model';
+import { CampaignNotification, CampaignNotificationFilter } from '../../domain/models/campaign-notification.model';
+import { PagedResponse } from '../../domain/models/paged-response.model';
+import { environment } from '../../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CampaignApiService {
   private readonly http = inject(HttpClient);
+  private templatesCache$?: Observable<CampaignTemplate[]>;
+  private readonly BASE_URL = `${environment.apiBaseUrl}/api/admin/campaigns`;
 
-  createCampaign(payload: CreateCampaignRequest): Observable<any> {
-    return this.http.post('/api/admin/campaigns/create', payload);
+  createCampaign(payload: CreateCampaignRequest): Observable<unknown> {
+    return this.http.post(`${this.BASE_URL}/create`, payload);
   }
 
   previewTemplate(templateName: string): Observable<TemplatePreviewResponse> {
-    return this.http.post<TemplatePreviewResponse>('/api/admin/campaigns/templates/preview', { templateName });
+    return this.http.post<TemplatePreviewResponse>(`${this.BASE_URL}/templates/preview`, { templateName });
+  }
+
+  getAllTemplates(): Observable<CampaignTemplate[]> {
+    if (!this.templatesCache$) {
+      this.templatesCache$ = this.http.get<CampaignTemplate[]>(`${this.BASE_URL}/templates/all`).pipe(
+        shareReplay(1)
+      );
+    }
+    return this.templatesCache$;
+  }
+
+  searchCampaigns(params: CampaignSearchParams): Observable<CampaignSearchResponse> {
+    let httpParams = new HttpParams()
+      .set('page', params.page.toString())
+      .set('size', params.size.toString());
+
+    if (params.campaignName) {
+      httpParams = httpParams.set('campaignName', params.campaignName);
+    }
+    if (params.status) {
+      httpParams = httpParams.set('status', params.status);
+    }
+    if (params.sortDirection) {
+      httpParams = httpParams.set('sortDirection', params.sortDirection);
+    }
+
+    return this.http.get<CampaignSearchResponse>(`${this.BASE_URL}/search`, { params: httpParams });
+  }
+
+  getCampaignById(campaignId: string): Observable<Campaign> {
+    return this.http.get<Campaign>(`${this.BASE_URL}/${campaignId}`);
+  }
+
+  getCampaignNotifications(
+    campaignId: string,
+    params: CampaignNotificationFilter
+  ): Observable<PagedResponse<CampaignNotification>> {
+    let httpParams = new HttpParams()
+      .set('page', params.page.toString())
+      .set('size', params.size.toString());
+
+    if (params.channel) httpParams = httpParams.set('channel', params.channel);
+    if (params.status) httpParams = httpParams.set('status', params.status);
+    if (params.keyword) httpParams = httpParams.set('keyword', params.keyword);
+
+    return this.http.get<PagedResponse<CampaignNotification>>(
+      `${this.BASE_URL}/${campaignId}/notifications`,
+      { params: httpParams }
+    );
   }
 }

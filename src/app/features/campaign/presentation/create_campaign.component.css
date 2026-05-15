@@ -123,7 +123,31 @@
 .form-grid-3 {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 14px;
+    gap: 16px;
+    background: #fbfaff;
+    padding: 18px;
+    border-radius: 14px;
+    border: 1px solid #eeeaf5;
+    transition: border-color .2s;
+}
+
+.form-grid-3:hover {
+    border-color: #e4dfff;
+}
+
+.form-grid-1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    background: #fbfaff;
+    padding: 18px;
+    border-radius: 14px;
+    border: 1px solid #eeeaf5;
+    transition: border-color .2s;
+}
+
+.form-grid-1:hover {
+    border-color: #e4dfff;
 }
 
 .form-input {
@@ -242,24 +266,76 @@
 
 .input-icon-wrap {
     position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .input-icon {
     position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+    right: 14px;
     color: #787583;
     pointer-events: none;
 }
 
-.input-icon-left {
+.input-icon-wrap--left .input-icon-left {
     position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+    left: 14px;
     color: #787583;
     pointer-events: none;
+}
+
+.form-input--pl {
+    padding-left: 40px;
+}
+
+.form-input--pointer {
+    cursor: pointer;
+    padding-right: 70px;
+}
+
+/* Template Picker Input Buttons */
+.btn-clear-template {
+    position: absolute;
+    right: 40px;
+    background: transparent;
+    border: none;
+    color: #ba1a1a;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.btn-clear-template:hover {
+    background: #fdeded;
+}
+
+.btn-search-template {
+    position: absolute;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: #574eb1;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.btn-search-template:hover {
+    background: #f1f0fd;
+}
+
+.btn-search-template .input-icon {
+    position: static;
+    color: inherit;
+    pointer-events: auto;
 }
 
 .select-wrap {
