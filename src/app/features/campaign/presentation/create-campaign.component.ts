@@ -191,7 +191,7 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/campaigns']);
   }
 
   onSubmit(): void {
@@ -210,7 +210,7 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
       tap(() => {
         this.isSubmitting = false;
         this.toast.success('Campaign created successfully', 'Your campaign has been scheduled and will be sent accordingly.');
-        this.router.navigate(['/notifications']);
+        this.router.navigate(['/campaigns']);
       }),
       catchError(error => {
         this.isSubmitting = false;

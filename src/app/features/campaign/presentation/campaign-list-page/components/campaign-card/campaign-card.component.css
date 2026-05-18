@@ -67,6 +67,7 @@
   color: #64748b;
   font-size: 0.8125rem;
   font-weight: 500;
+  flex-wrap: wrap;
 }
 
 .channel-icons {
@@ -170,12 +171,86 @@
 
 /* RESPONSIVE */
 @media (max-width: 1200px) {
-  .card-stats { gap: 1.5rem; padding-left: 1.5rem; }
-  .stat-details { gap: 1.5rem; }
+  .campaign-card {
+    grid-template-columns: 1fr 340px auto;
+    gap: 1.25rem;
+  }
+  .card-stats { gap: 1.25rem; padding-left: 1.25rem; }
+  .stat-details { gap: 1.25rem; }
 }
 
 @media (max-width: 1024px) {
-  .campaign-card { flex-direction: column; align-items: flex-start; gap: 1rem; }
-  .card-status { width: auto; }
-  .card-stats { border-left: none; border-top: 1px solid #f1f5f9; padding-left: 0; padding-top: 1rem; width: 100%; justify-content: space-between; margin-left: 0; }
+  .campaign-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.25rem;
+    position: relative;
+    padding-right: 3.5rem; /* Make room for absolute positioned actions */
+  }
+  
+  .card-info {
+    width: 100%;
+  }
+
+  .card-stats {
+    border-left: none;
+    border-top: 1px solid #f1f5f9;
+    padding-left: 0;
+    padding-top: 1.25rem;
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    gap: 2.5rem;
+  }
+
+  .card-actions {
+    position: absolute;
+    top: 1.25rem;
+    right: 1rem;
+    margin-left: 0;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .campaign-card {
+    padding: 1.25rem;
+    padding-right: 1.25rem; /* Normalize padding on mobile */
+  }
+
+  .card-actions {
+    position: static;
+    justify-content: flex-end;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 0.75rem;
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+
+  .card-stats {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .stat-main {
+    min-width: 0;
+  }
+
+  .stat-details {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  
+  .meta-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .meta-divider {
+    display: none;
+  }
 }

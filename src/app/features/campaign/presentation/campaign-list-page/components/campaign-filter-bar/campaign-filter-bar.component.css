@@ -144,7 +144,7 @@
   .toolbar-card {
     flex-direction: column;
     align-items: stretch;
-    gap: 1.25rem;
+    gap: 1rem;
   }
 
   .search-box {
@@ -153,6 +153,31 @@
 
   .status-tabs {
     overflow-x: auto;
-    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    padding-bottom: 2px;
+  }
+
+  .tab-btn {
+    flex: 1 0 auto;
+    text-align: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .toolbar-card {
+    padding: 0.875rem 1rem;
+    gap: 0.875rem;
+  }
+  
+  .filter-item {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .filter-select {
+    flex: 1;
   }
 }

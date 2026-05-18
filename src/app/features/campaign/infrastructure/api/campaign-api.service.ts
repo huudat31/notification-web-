@@ -77,4 +77,12 @@ export class CampaignApiService {
       { params: httpParams }
     );
   }
+
+  retryNotification(notificationId: number): Observable<unknown> {
+    return this.http.post(`${this.BASE_URL}/${notificationId}/retry`, {});
+  }
+
+  getNotificationDetails(notificationId: number): Observable<any> {
+    return this.http.get(`${this.BASE_URL}/notifications/${notificationId}/details`);
+  }
 }

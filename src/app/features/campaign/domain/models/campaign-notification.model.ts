@@ -25,4 +25,36 @@ export interface CampaignStats {
   failed: number;
   pending: number;
   total: number;
+  channel?: 'PUSH' | 'EMAIL' | 'SMS' | 'MULTI';
 }
+
+export interface PushNotificationDetail {
+  id: number;
+  address: string;
+  deviceName: string;
+  status: 'SENT' | 'FAILED' | 'PENDING';
+  retryCount: number;
+  errorMessage: string | null;
+  updatedAt: string;
+}
+
+export interface EmailNotificationDetail {
+  id: number;
+  target: string;
+  deviceName: null;
+  status: 'SENT' | 'FAILED' | 'PENDING';
+  retryCount: number;
+  errorMessage: string | null;
+  updatedAt: string;
+}
+
+export interface SmsNotificationDetail {
+  id: number;
+  target: string;
+  status: 'SENT' | 'FAILED' | 'PENDING';
+  retryCount: number;
+  errorMessage: string | null;
+  updatedAt: string;
+}
+
+export type NotificationDetail = PushNotificationDetail[] | EmailNotificationDetail | SmsNotificationDetail;

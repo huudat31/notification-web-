@@ -5,8 +5,10 @@ import { CampaignNotificationPageService } from './services/campaign-notificatio
 import { CampaignOverviewCardsComponent } from './components/campaign-overview-cards/campaign-overview-cards.component';
 import { NotificationFilterBarComponent } from './components/notification-filter-bar/notification-filter-bar.component';
 import { NotificationListComponent } from './components/notification-list/notification-list.component';
+import { NotificationDetailDrawerComponent } from './components/notification-detail-drawer/notification-detail-drawer.component';
 
-import { CampaignNotificationFilter } from '../../domain/models/campaign-notification.model';
+import { CampaignNotification, CampaignNotificationFilter } from '../../domain/models/campaign-notification.model';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-campaign-notifications',
@@ -16,211 +18,230 @@ import { CampaignNotificationFilter } from '../../domain/models/campaign-notific
     RouterModule,
     CampaignOverviewCardsComponent,
     NotificationFilterBarComponent,
-    NotificationListComponent
+    NotificationListComponent,
+    NotificationDetailDrawerComponent
   ],
   providers: [CampaignNotificationPageService],
   template: `
-    <div class="page-container" *ngIf="campaign$ | async as campaign">
-      <!-- Header -->
+    <div class="dashboard-shell" *ngIf="campaign$ | async as campaign">
+      
+      <!-- HEADER -->
       <header class="page-header">
         <div class="header-top">
-          <button class="back-btn" [routerLink]="['/campaigns']">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" 
-                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"></line>
-              <polyline points="12 19 5 12 12 5"></polyline>
-            </svg>
-            Back to Campaigns
-          </button>
-          <div class="breadcrumb">
-             <span>Campaigns</span> / <span>Notifications</span>
-          </div>
+          <nav class="breadcrumb">
+            <span [routerLink]="['/campaigns']" class="breadcrumb-item link">Campaigns</span>
+            <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <span class="breadcrumb-item link" [routerLink]="['/campaigns']">{{ campaign.name }}</span>
+            <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <span class="breadcrumb-item active">Notifications</span>
+          </nav>
         </div>
 
-        <div class="header-content">
-          <div class="title-section">
-            <h1 class="page-title">
-              <span class="emoji">🔥</span>
-              {{ campaign.name }}
-            </h1>
-            <p class="page-desc">Detailed activity logs and delivery status for this campaign.</p>
+        <div class="header-bottom">
+          <div class="title-container">
+            <button class="back-btn" [routerLink]="['/campaigns']" title="Back to Campaigns">
+               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <div class="title-group">
+              <h1 class="page-title">Campaign Notifications</h1>
+              <p class="page-subtitle" *ngIf="state$ | async as state">
+                Showing total <span class="count-badge">{{ state.totalElements }}</span> notifications sent for this campaign.
+              </p>
+            </div>
           </div>
-          <div class="meta-section">
-            <div class="meta-item">
-              <span class="meta-label">Created At</span>
-              <span class="meta-value">{{ campaign.createdAt | date:'MMM d, yyyy' }}</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Channel</span>
-              <span class="meta-value">{{ campaign.channel }}</span>
-            </div>
+          <div class="header-actions">
+             <button class="btn-primary" [routerLink]="['/campaigns/create']">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                New Notification
+             </button>
           </div>
         </div>
       </header>
 
-      <!-- Content -->
-      <main class="page-content">
-        <!-- Stats -->
+      <!-- CONTENT -->
+      <main class="main-content">
+        <!-- Summary Cards -->
         <app-campaign-overview-cards [stats]="(stats$ | async)!"></app-campaign-overview-cards>
 
-        <!-- Filters -->
-        <app-notification-filter-bar (filterChange)="onFilterChange($event)"></app-notification-filter-bar>
+        <!-- Search & Filters -->
+        <app-notification-filter-bar 
+          (filterChange)="onFilterChange($event)"
+          (refresh)="refresh()">
+        </app-notification-filter-bar>
 
-        <!-- List State -->
+        <!-- Notifications Table -->
         <ng-container *ngIf="state$ | async as state">
-          <!-- Error State -->
-          <div class="error-alert" *ngIf="state.error">
-            <div class="error-content">
-               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" 
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-              </svg>
-              <span>{{ state.error }}</span>
-            </div>
-            <button class="retry-btn" (click)="retry()">Retry</button>
+          <!-- Error banner -->
+          <div class="error-banner" *ngIf="state.error">
+             <div class="error-msg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span>{{ state.error }}</span>
+             </div>
+             <button class="btn-retry-main" (click)="refresh()">Try Again</button>
           </div>
 
-          <!-- List -->
           <app-notification-list 
             [notifications]="state.notifications" 
-            [isLoading]="state.isLoading">
+            [isLoading]="state.isLoading"
+            (viewDetails)="openDetail($event)"
+            (retryNotification)="onRetry($event)">
           </app-notification-list>
         </ng-container>
       </main>
+
+      <!-- DETAIL DRAWER -->
+      <app-notification-detail-drawer
+        [isOpen]="isDrawerOpen"
+        [notification]="selectedNotification"
+        (closeDrawer)="closeDetail()">
+      </app-notification-detail-drawer>
     </div>
   `,
   styles: [`
-    .page-container {
+    .dashboard-shell {
       min-height: 100vh;
       background: #f8fafc;
+      display: flex;
+      flex-direction: column;
     }
+
     .page-header {
+      padding: 1.5rem 2.5rem;
       background: white;
-      padding: 1.5rem 2.5rem 2.5rem;
       border-bottom: 1px solid #e2e8f0;
     }
-    .header-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-    }
-    .back-btn {
+    .header-top { margin-bottom: 1.5rem; }
+    .breadcrumb {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      background: none;
-      border: none;
-      color: #64748b;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 600;
-      cursor: pointer;
-      padding: 0.5rem 0.75rem;
-      margin-left: -0.75rem;
-      border-radius: 0.5rem;
-      transition: all 0.2s;
     }
-    .back-btn:hover {
-      background: #f1f5f9;
-      color: #1e293b;
-    }
-    .breadcrumb {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .header-content {
+    .breadcrumb-item { color: #64748b; }
+    .breadcrumb-item.active { color: #0f172a; }
+    .breadcrumb-item.link { cursor: pointer; transition: color 0.2s; }
+    .breadcrumb-item.link:hover { color: #7c3aed; }
+    .chevron { color: #cbd5e1; }
+
+    .header-bottom {
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
+      align-items: center;
     }
-    .page-title {
-      font-size: 2.25rem;
-      font-weight: 800;
-      color: #0f172a;
-      margin: 0 0 0.5rem 0;
+    .title-container {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 1.25rem;
+    }
+    .back-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid #e2e8f0;
+      background: white;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    }
+    .back-btn:hover {
+      background: #f8fafc;
+      color: #7c3aed;
+      border-color: #ddd6fe;
+      transform: translateX(-3px);
+      box-shadow: 0 4px 10px rgba(124, 58, 237, 0.1);
+    }
+    .page-title {
+      font-size: 1.875rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 0.25rem 0;
       letter-spacing: -0.025em;
     }
-    .page-desc {
-      color: #64748b;
+    .page-subtitle {
       font-size: 0.875rem;
+      color: #64748b;
       margin: 0;
     }
-    .meta-section {
-      display: flex;
-      gap: 2rem;
-    }
-    .meta-item {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      align-items: flex-end;
-    }
-    .meta-label {
-      font-size: 0.65rem;
+    .count-badge {
+      background: #f1f5f9;
+      color: #1e293b;
+      padding: 0.125rem 0.5rem;
+      border-radius: 0.375rem;
       font-weight: 700;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      margin: 0 0.125rem;
     }
-    .meta-value {
+
+    .btn-primary {
+      background: #0f172a;
+      color: white;
+      border: none;
+      padding: 0.625rem 1.25rem;
+      border-radius: 0.5rem;
+      font-weight: 700;
       font-size: 0.875rem;
-      font-weight: 700;
-      color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
     }
+    .btn-primary:hover { background: #1e293b; transform: translateY(-1px); }
 
-    .page-content {
-      max-width: 1200px;
-      margin: 0 auto;
+    .main-content {
+      flex: 1;
       padding: 2rem 2.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
     }
 
-    .error-alert {
-      background: #fef2f2;
-      border: 1px solid #fee2e2;
+    .error-banner {
+      background: #fff1f2;
+      border: 1px solid #ffe4e6;
       padding: 1rem 1.5rem;
       border-radius: 0.75rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1.5rem;
-      color: #991b1b;
+      color: #e11d48;
     }
-    .error-content { display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; font-weight: 500; }
-    .retry-btn {
+    .error-msg { display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; font-weight: 600; }
+    .btn-retry-main {
       background: white;
-      border: 1px solid #fee2e2;
+      border: 1px solid #ffe4e6;
       padding: 0.4rem 1rem;
       border-radius: 0.5rem;
       font-size: 0.75rem;
       font-weight: 700;
-      color: #991b1b;
+      color: #e11d48;
       cursor: pointer;
       transition: all 0.2s;
     }
-    .retry-btn:hover { background: #fee2e2; }
+    .btn-retry-main:hover { background: #ffe4e6; }
 
     @media (max-width: 768px) {
-      .header-content { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
-      .meta-section { align-self: flex-start; }
-      .meta-item { align-items: flex-start; }
+      .header-bottom { flex-direction: column; align-items: flex-start; gap: 1rem; }
     }
   `]
 })
 export class CampaignNotificationsComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private pageService = inject(CampaignNotificationPageService);
+  private toast = inject(ToastService);
 
   readonly campaign$ = this.pageService.campaign$;
   readonly stats$ = this.pageService.stats$;
   readonly state$ = this.pageService.state$;
+
+  // Drawer state
+  isDrawerOpen = false;
+  selectedNotification: CampaignNotification | null = null;
 
   ngOnInit() {
     const campaignId = this.route.snapshot.paramMap.get('campaignId');
@@ -233,10 +254,33 @@ export class CampaignNotificationsComponent implements OnInit {
     this.pageService.updateFilters(filters);
   }
 
-  retry(): void {
-    // Re-trigger the current filters by setting id again
+  refresh(): void {
     const campaignId = this.route.snapshot.paramMap.get('campaignId');
     if (campaignId) this.pageService.setCampaignId(campaignId);
+  }
+
+  openDetail(n: CampaignNotification) {
+    this.selectedNotification = n;
+    this.isDrawerOpen = true;
+  }
+
+  closeDetail() {
+    this.isDrawerOpen = false;
+    this.selectedNotification = null;
+  }
+
+  onRetry(n: CampaignNotification) {
+    if (n.status.trim().toUpperCase() !== 'FAILED') return;
+    this.pageService.retryNotification(n.id).subscribe({
+      next: () => {
+         this.toast.success('Retry Initiated', 'Manual retry request sent successfully.');
+         this.refresh();
+      },
+      error: (err) => {
+         this.toast.error('Retry Failed', 'Unable to retry notification sending.');
+         console.error('Retry failed', err);
+      }
+    });
   }
 
   @HostListener('window:scroll', [])
@@ -244,11 +288,10 @@ export class CampaignNotificationsComponent implements OnInit {
     const pos = (document.documentElement.scrollTop || document.body.scrollTop) + document.documentElement.offsetHeight;
     const max = document.documentElement.scrollHeight;
 
-    // If we are near the bottom and not currently loading, load next page
     this.state$.subscribe(state => {
       if (pos > max - 200 && !state.isLoading && state.hasMore) {
         this.pageService.loadNextPage();
       }
-    }).unsubscribe(); // Be careful with scroll listeners and async pipe
+    }).unsubscribe();
   }
 }
