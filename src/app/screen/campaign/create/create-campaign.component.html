@@ -1,0 +1,311 @@
+<div class="campaign-page">
+    
+    <div class="campaign-page__header">
+        <button class="back-btn" (click)="goBack()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5">
+                <path d="m15 18-6-6 6-6" />
+            </svg>
+        </button>
+        <h1 class="campaign-page__title">Tạo Chiến Dịch Thông Báo</h1>
+    </div>
+
+    <div class="campaign-layout">
+        
+        <div class="campaign-form-col">
+            <form [formGroup]="campaignForm" (ngSubmit)="onSubmit()" class="campaign-card">
+                
+                <div class="campaign-card__section">
+                    <div class="section-label">
+                        <div class="section-label__bar"></div>
+                        <span>1. Cấu hình thời gian &amp; đối tượng</span>
+                    </div>
+                    <div class="form-grid-1">
+                        <div class="form-field">
+                            <label class="form-label">Tên chiến dịch <span class="required">*</span></label>
+                            <input class="form-input" type="text" formControlName="name"
+                                placeholder="Ví dụ: Khuyến mãi Hè 2026 - Flash Sale"
+                                [class.form-input--error]="isInvalid('name')" />
+                            <span *ngIf="isInvalid('name')" class="form-error">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                Vui lòng nhập tên chiến dịch
+                            </span>
+                        </div>
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-field">
+                            <label class="form-label">Ngày bắt đầu <span class="required">*</span></label>
+                            <div class="input-icon-wrap">
+                                <input class="form-input" type="date" formControlName="startDate"
+                                    [class.form-input--error]="isInvalid('startDate') || campaignForm.hasError('futureDate')" />
+                                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                                    <line x1="16" x2="16" y1="2" y2="6" />
+                                    <line x1="8" x2="8" y1="2" y2="6" />
+                                    <line x1="3" x2="21" y1="10" y2="10" />
+                                </svg>
+                            </div>
+                            <span *ngIf="isInvalid('startDate')" class="form-error">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                Vui lòng chọn ngày bắt đầu
+                            </span>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Giờ bắt đầu <span class="required">*</span></label>
+                            <div class="input-icon-wrap">
+                                <input class="form-input" type="time" formControlName="startClock" [min]="minTime"
+                                    [class.form-input--error]="isInvalid('startClock') || campaignForm.hasError('futureDate')" />
+                                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                            </div>
+                            <span *ngIf="isInvalid('startClock') && !isInvalid('startDate')" class="form-error">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                Vui lòng chọn giờ bắt đầu
+                            </span>
+                            <span
+                                *ngIf="campaignForm.hasError('futureDate') && !isInvalid('startDate') && !isInvalid('startClock')"
+                                class="form-error">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                Thời gian bắt đầu phải lớn hơn hiện tại
+                            </span>
+                        </div>
+                    </div>
+                    <div class="form-grid-3">
+                        <div class="form-field">
+                            <label class="form-label">Đối tượng <span class="required">*</span></label>
+                            <div class="select-wrap">
+                                <select class="form-select" formControlName="audience">
+                                    <option>Chỉ User Active</option>
+                                    <option>Tất cả User</option>
+                                    <option>Nhóm cụ thể</option>
+                                </select>
+                                <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m6 9 6 6 6-6" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Kênh gửi <span class="required">*</span></label>
+                            <div class="select-wrap">
+                                <select class="form-select" formControlName="channel">
+                                    <option>Gửi cả Email &amp; Push</option>
+                                    <option>Chỉ Email</option>
+                                    <option>Chỉ Push</option>
+                                </select>
+                                <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m6 9 6 6 6-6" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Tốc độ (Tin/Giờ) <span class="required">*</span></label>
+                            <input class="form-input" type="number" formControlName="speed" placeholder="1000" />
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div class="campaign-card__section campaign-card__section--no-border">
+                    <div class="section-label">
+                        <div class="section-label__bar"></div>
+                        <span>2. Nội dung thông báo</span>
+                    </div>
+                    <div class="form-grid-1">
+                        <div class="form-field">
+                            <label class="form-label">Template Name <span class="form-optional">(Nếu có)</span></label>
+                            <div class="input-icon-wrap" [class.has-value]="campaignForm.get('template')?.value">
+                                <input class="form-input form-input--pointer" type="text" formControlName="template"
+                                    placeholder="Chọn template có sẵn..." readonly (click)="openTemplatePicker()" />
+
+                                <button type="button" class="btn-clear-template"
+                                    *ngIf="campaignForm.get('template')?.value" (click)="clearTemplateState()"
+                                    title="Bỏ chọn template">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+
+                                <button type="button" class="btn-search-template" (click)="openTemplatePicker()"
+                                    title="Tìm template">
+                                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Tiêu đề thông báo</label>
+                            <input class="form-input" type="text" formControlName="notifTitle"
+                                placeholder="Ví dụ: Ưu đãi 50% cho riêng bạn!" />
+                        </div>
+                        <div class="form-field">
+                            <div class="form-label-row">
+                                <label class="form-label">Nội dung tin nhắn</label>
+                                <span class="form-tag">Hỗ trợ Markdown</span>
+                            </div>
+                            <textarea class="form-textarea" formControlName="body"
+                                placeholder="Nhập nội dung chi tiết của thông báo..."></textarea>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Action URL</label>
+                            <div class="input-icon-wrap input-icon-wrap--left">
+                                <svg class="input-icon-left" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                </svg>
+                                <input class="form-input form-input--pl" type="url" formControlName="actionUrl"
+                                    placeholder="https://example.com/promotion" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div class="campaign-card__footer">
+                    <button type="button" class="btn-ghost" (click)="goBack()">Huỷ</button>
+                    <button type="submit" class="btn-submit" [disabled]="isSubmitting">
+                        <span *ngIf="!isSubmitting">Xác nhận tạo chiến dịch</span>
+                        <span *ngIf="isSubmitting" class="spinner"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        
+        <div class="campaign-sidebar-col">
+            
+            <div class="preview-card">
+                <div class="preview-tabs">
+                    <button class="preview-tab" [class.preview-tab--active]="previewTab === 'push'"
+                        (click)="previewTab = 'push'">Push Preview</button>
+                    <button class="preview-tab" [class.preview-tab--active]="previewTab === 'email'"
+                        (click)="previewTab = 'email'">Email Preview</button>
+                </div>
+
+                <app-template-picker-overlay *ngIf="isTemplatePickerOpen" (close)="closeTemplatePicker()"
+                    (selectTemplate)="onTemplateSelected($event)">
+                </app-template-picker-overlay>
+                <div class="preview-screen">
+                    
+                    <div class="phone-mock" *ngIf="previewTab === 'push'">
+                        <div class="phone-mock__bar">
+                            <span>9:41</span>
+                            <div class="phone-mock__icons">
+                                <div class="phone-icon-signal"></div>
+                                <div class="phone-icon-wifi"></div>
+                                <div class="phone-icon-battery"></div>
+                            </div>
+                        </div>
+                        <div class="phone-mock__wallpaper"></div>
+                        <div class="phone-mock__notif">
+                            <div class="phone-notif__header">
+                                <div class="phone-notif__app-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                        fill="none" stroke="#fff" stroke-width="2.5">
+                                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                                    </svg>
+                                </div>
+                                <span class="phone-notif__app">NotifyAdmin</span>
+                                <span class="phone-notif__time">Vừa xong</span>
+                            </div>
+                            <p class="phone-notif__title">{{ previewTitle || 'Tiêu đề thông báo' }}</p>
+                            <p class="phone-notif__body">{{ previewBody || 'Nội dung thông báo sẽ hiển thị tại đây...' }}</p>
+                        </div>
+                        <div class="phone-mock__home-bar"></div>
+                    </div>
+
+                    
+                    <div class="email-mock" *ngIf="previewTab === 'email'">
+                        <div class="email-mock__header">
+                            <div class="email-mock__from">
+                                <div class="email-avatar">N</div>
+                                <div class="email-meta">
+                                    <p class="email-sender">NotifyAdmin <span>&lt;no-reply&#64;notify.com&gt;</span></p>
+                                    <p class="email-to">Tới: <span>Người dùng của bạn</span></p>
+                                </div>
+                            </div>
+                            <div class="email-date">Hôm nay, 16:00</div>
+                        </div>
+                        <div class="email-mock__content">
+                            <h2 class="email-subject">{{ previewTitle || 'Tiêu đề email' }}</h2>
+                            <div class="email-body">
+                                {{ previewBody || 'Nội dung email sẽ hiển thị tại đây...' }}
+                            </div>
+                            <div class="email-footer" *ngIf="campaignForm.get('actionUrl')?.value">
+                                <a [href]="campaignForm.get('actionUrl')?.value" target="_blank" class="email-btn">Xem chi tiết</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-hint">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4" />
+                        <path d="M12 8h.01" />
+                    </svg>
+                    Xem trước có thể thay đổi tùy theo thiết bị người dùng.
+                </div>
+            </div>
+
+            
+            <div class="reach-card">
+                <div class="reach-card__icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke="#574eb1" stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="reach-card__label">Dự kiến tiếp cận</h4>
+                    <p class="reach-card__value">12,482 <span>người dùng</span></p>
+                    <div class="reach-card__trend">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5">
+                            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                            <polyline points="16 7 22 7 22 13" />
+                        </svg>
+                        +12% so với tuần trước
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

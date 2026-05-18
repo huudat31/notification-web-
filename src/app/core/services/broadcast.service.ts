@@ -25,12 +25,12 @@ export class BroadcastService {
 
     try {
       this.channel?.postMessage(message);
-    } catch { /* ignore */ }
+    } catch {  }
 
     try {
       localStorage.setItem('_auth_logout', JSON.stringify(message));
       setTimeout(() => localStorage.removeItem('_auth_logout'), 200);
-    } catch { /* ignore */ }
+    } catch {  }
   }
 
   listenForLogout(): Observable<void> {

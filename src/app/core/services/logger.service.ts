@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
-import { AuthEvent, AuthEventType } from '../auth/models/auth.model';
+import { AuthEvent, AuthEventType } from '@data/model/auth.model';
 
 @Injectable({ providedIn: 'root' })
 export class LoggerService {
