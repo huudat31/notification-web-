@@ -8,6 +8,6 @@ export const campaignKeys = {
   details: () => [...campaignKeys.all, 'detail'] as const,
   detail: (id: string) => [...campaignKeys.details(), id] as const,
   notificationsAll: (id: string) => [...campaignKeys.detail(id), 'notifications'] as const,
-  notifications: (id: string, filters: CampaignNotificationFilter) => [...campaignKeys.notificationsAll(id), filters] as const,
+  notifications: (id: string, filters: Omit<CampaignNotificationFilter, 'page'>) => [...campaignKeys.notificationsAll(id), filters] as const,
   templates: () => [...campaignKeys.all, 'templates'] as const,
 };

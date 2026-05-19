@@ -270,7 +270,7 @@ import { CampaignNotification } from '@data/model/campaign-notification.model';
 export class NotificationListComponent {
   @Input() notifications: CampaignNotification[] = [];
   @Input() isLoading = false;
-  
+
   @Output() viewDetails = new EventEmitter<CampaignNotification>();
   @Output() retryNotification = new EventEmitter<CampaignNotification>();
 

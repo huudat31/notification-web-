@@ -23,8 +23,8 @@ export const routes: Routes = [
       { path: 'campaigns', component: CampaignListComponent },
       { path: 'campaigns/create', component: CreateCampaignComponent },
       { path: 'settings', component: SettingsComponent },
-      { 
-        path: 'campaigns/:campaignId/notifications', 
+      {
+        path: 'campaigns/:campaignId/notifications',
         loadComponent: () => import('@screen/campaign/notifications/campaign-notifications.component').then(m => m.CampaignNotificationsComponent)
       },
     ],

@@ -493,7 +493,7 @@ export class NotificationDetailDrawerComponent {
   }
 
   asEmailDetails(d: any): EmailNotificationDetail[] {
-     return Array.isArray(d) ? d : [d];
+    return Array.isArray(d) ? d : [d];
   }
 
   asSmsDetails(d: any): SmsNotificationDetail[] {

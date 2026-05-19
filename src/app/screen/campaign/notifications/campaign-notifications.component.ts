@@ -1,11 +1,9 @@
-import { Component, OnInit, inject, HostListener } from '@angular/core';
+import { Component, OnInit, inject, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { Observable } from 'rxjs';
 import { CampaignNotificationRepository, NotificationPageState } from '@data/repository/campaign-notification.repository';
 import { ToastService } from '@core/services/toast.service';
-import { Campaign } from '@data/model/campaign.model';
-import { CampaignNotification, CampaignNotificationFilter, CampaignStats } from '@data/model/campaign-notification.model';
+import { CampaignNotification, CampaignNotificationFilter } from '@data/model/campaign-notification.model';
 import { CampaignOverviewCardsComponent } from '../components/campaign-overview-cards/campaign-overview-cards.component';
 import { NotificationFilterBarComponent } from '../components/notification-filter-bar/notification-filter-bar.component';
 import { NotificationListComponent } from '../components/notification-list/notification-list.component';
@@ -23,73 +21,78 @@ import { NotificationDetailDrawerComponent } from '../components/notification-de
     NotificationDetailDrawerComponent
   ],
   providers: [CampaignNotificationRepository],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="dashboard-shell" *ngIf="campaign$ | async as campaign">
-      
-      <!-- HEADER -->
-      <header class="page-header">
-        <div class="header-top">
-          <nav class="breadcrumb">
-            <span [routerLink]="['/campaigns']" class="breadcrumb-item link">Campaigns</span>
-            <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            <span class="breadcrumb-item link" [routerLink]="['/campaigns']">{{ campaign.name }}</span>
-            <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            <span class="breadcrumb-item active">Notifications</span>
-          </nav>
-        </div>
+    @if (pageService.campaignQuery.data(); as campaign) {
+      <div class="dashboard-shell">
+        
+        <!-- HEADER -->
+        <header class="page-header">
+          <div class="header-top">
+            <nav class="breadcrumb">
+              <span [routerLink]="['/campaigns']" class="breadcrumb-item link">Campaigns</span>
+              <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              <span class="breadcrumb-item link" [routerLink]="['/campaigns']">{{ campaign.name }}</span>
+              <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              <span class="breadcrumb-item active">Notifications</span>
+            </nav>
+          </div>
 
-        <div class="header-bottom">
-          <div class="title-container">
-            <button class="back-btn" [routerLink]="['/campaigns']" title="Back to Campaigns">
-               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-            </button>
-            <div class="title-group">
-               <h1 class="page-title">Campaign Notifications</h1>
-               <p class="page-subtitle" *ngIf="state$ | async as state">
-                 Showing total <span class="count-badge">{{ state.totalElements }}</span> notifications sent for this campaign.
-               </p>
+          <div class="header-bottom">
+            <div class="title-container">
+              <button class="back-btn" [routerLink]="['/campaigns']" title="Back to Campaigns">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+              </button>
+              <div class="title-group">
+                 <h1 class="page-title">Campaign Notifications</h1>
+                 <p class="page-subtitle">
+                   Showing total <span class="count-badge">{{ pageService.state().totalElements }}</span> notifications sent for this campaign.
+                 </p>
+              </div>
+            </div>
+            <div class="header-actions">
+               <button class="btn-primary" [routerLink]="['/campaigns/create']">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  New Notification
+               </button>
             </div>
           </div>
-          <div class="header-actions">
-             <button class="btn-primary" [routerLink]="['/campaigns/create']">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                New Notification
-             </button>
-          </div>
-        </div>
-      </header>
+        </header>
 
-      <!-- STATS OVERVIEW CARDS -->
-      <app-campaign-overview-cards [stats]="(stats$ | async)!" />
+        <!-- STATS OVERVIEW CARDS -->
+        <app-campaign-overview-cards [stats]="pageService.stats()" />
 
-      <!-- FILTER BAR -->
-      <app-notification-filter-bar (filterChange)="onFilterChange($event)" />
+        <!-- FILTER BAR -->
+        <app-notification-filter-bar (filterChange)="onFilterChange($event)" />
 
-      <!-- MAIN CONTENT -->
-      <main class="page-content" *ngIf="state$ | async as state">
-         <div class="card notification-card">
-           <app-notification-list 
-             [notifications]="state.notifications"
-             [isLoading]="state.isLoading"
-             (viewDetails)="openDetail($event)"
-             (retryNotification)="onRetry($event)"
-           />
-           
-           <div *ngIf="state.isLoading && state.notifications.length > 0" class="infinite-scroll-loading">
-              <div class="spinner"></div>
-              <span>Loading more notifications...</span>
+        <!-- MAIN CONTENT -->
+        <main class="page-content">
+           <div class="card notification-card">
+             <app-notification-list 
+               [notifications]="pageService.state().notifications"
+               [isLoading]="pageService.state().isLoading"
+               (viewDetails)="openDetail($event)"
+               (retryNotification)="onRetry($event)"
+             />
+             
+             @if (pageService.state().isFetchingNextPage) {
+               <div class="infinite-scroll-loading">
+                  <div class="spinner"></div>
+                  <span>Loading more notifications...</span>
+               </div>
+             }
            </div>
-         </div>
-      </main>
+        </main>
 
-      <!-- DETAIL DRAWER -->
-      <app-notification-detail-drawer 
-        [isOpen]="isDrawerOpen"
-        [notification]="selectedNotification"
-        (closeDrawer)="closeDetail()"
-      />
+        <!-- DETAIL DRAWER -->
+        <app-notification-detail-drawer 
+          [isOpen]="isDrawerOpen"
+          [notification]="selectedNotification"
+          (closeDrawer)="closeDetail()"
+        />
 
-    </div>
+      </div>
+    }
   `,
   styles: [`
     .dashboard-shell {
@@ -238,12 +241,8 @@ import { NotificationDetailDrawerComponent } from '../components/notification-de
 })
 export class CampaignNotificationsComponent implements OnInit {
   private route = inject(ActivatedRoute);
-  private pageService = inject(CampaignNotificationRepository);
+  readonly pageService = inject(CampaignNotificationRepository);
   private toast = inject(ToastService);
-
-  readonly campaign$: Observable<Campaign | null> = this.pageService.campaign$;
-  readonly stats$: Observable<CampaignStats> = this.pageService.stats$;
-  readonly state$: Observable<NotificationPageState> = this.pageService.state$;
 
   isDrawerOpen = false;
   selectedNotification: CampaignNotification | null = null;
@@ -267,23 +266,25 @@ export class CampaignNotificationsComponent implements OnInit {
   openDetail(n: CampaignNotification) {
     this.selectedNotification = n;
     this.isDrawerOpen = true;
+    this.pageService.setActiveNotificationId(n.id);
   }
 
   closeDetail() {
     this.isDrawerOpen = false;
     this.selectedNotification = null;
+    this.pageService.setActiveNotificationId(null);
   }
 
   onRetry(n: CampaignNotification) {
     if (n.status.trim().toUpperCase() !== 'FAILED') return;
     this.pageService.retryNotification(n.id).subscribe({
       next: () => {
-         this.toast.success('Retry Initiated', 'Manual retry request sent successfully.');
-         this.refresh();
+        this.toast.success('Retry Initiated', 'Manual retry request sent successfully.');
+        this.refresh();
       },
       error: (err) => {
-         this.toast.error('Retry Failed', 'Unable to retry notification sending.');
-         console.error('Retry failed', err);
+        this.toast.error('Retry Failed', 'Unable to retry notification sending.');
+        console.error('Retry failed', err);
       }
     });
   }
@@ -293,10 +294,9 @@ export class CampaignNotificationsComponent implements OnInit {
     const pos = (document.documentElement.scrollTop || document.body.scrollTop) + document.documentElement.offsetHeight;
     const max = document.documentElement.scrollHeight;
 
-    this.state$.subscribe(state => {
-      if (pos > max - 200 && !state.isLoading && state.hasMore) {
-        this.pageService.loadNextPage();
-      }
-    }).unsubscribe();
+    const state = this.pageService.state();
+    if (pos > max - 200 && !state.isLoading && !state.isFetchingNextPage && state.hasMore) {
+      this.pageService.loadNextPage();
+    }
   }
 }

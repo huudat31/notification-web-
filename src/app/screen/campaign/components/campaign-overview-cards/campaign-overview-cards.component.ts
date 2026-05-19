@@ -101,9 +101,21 @@ import { CampaignStats } from '@data/model/campaign-notification.model';
   `]
 })
 export class CampaignOverviewCardsComponent {
-  @Input() stats: CampaignStats = { sent: 0, failed: 0, pending: 0, total: 0 };
+  private _stats: CampaignStats = { sent: 0, failed: 0, pending: 0, total: 0 };
+
+  @Input()
+  set stats(val: CampaignStats | null) {
+    if (val) {
+      this._stats = val;
+    }
+  }
+
+  get stats(): CampaignStats {
+    return this._stats;
+  }
 
   get pushValue(): number {
+    if (this.stats.push !== undefined) return this.stats.push;
     const ch = this.stats.channel;
     if (!ch) return Math.floor(this.stats.total * 0.6);
     if (ch === 'PUSH') return this.stats.total;
@@ -112,6 +124,7 @@ export class CampaignOverviewCardsComponent {
   }
 
   get emailValue(): number {
+    if (this.stats.email !== undefined) return this.stats.email;
     const ch = this.stats.channel;
     if (!ch) return Math.floor(this.stats.total * 0.3);
     if (ch === 'EMAIL') return this.stats.total;
@@ -120,6 +133,7 @@ export class CampaignOverviewCardsComponent {
   }
 
   get smsValue(): number {
+    if (this.stats.sms !== undefined) return this.stats.sms;
     const ch = this.stats.channel;
     if (!ch) return Math.floor(this.stats.total * 0.1);
     if (ch === 'SMS') return this.stats.total;

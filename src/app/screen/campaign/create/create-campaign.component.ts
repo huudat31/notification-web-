@@ -7,6 +7,9 @@ import { ToastService } from '@core/services/toast.service';
 import { CampaignCommandFacade } from '@data/facade/campaign-command.facade';
 import { CreateCampaignRequest, CampaignTemplate } from '@data/model/campaign.model';
 import { TemplatePickerOverlayComponent } from '../components/template-picker-overlay/template-picker-overlay.component';
+import { TargetUserOverlayComponent } from './components/target-user-overlay/target-user-overlay.component';
+import { CampaignCreateFacade } from '@data/facade/campaign-create.facade';
+import { CampaignTargetStore } from '@data/stores/campaign-target.store';
 
 export function futureDateTimeValidator(): ValidatorFn {
   return (group: AbstractControl): ValidationErrors | null => {
@@ -27,7 +30,8 @@ export function futureDateTimeValidator(): ValidatorFn {
 @Component({
   selector: 'app-create-campaign',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TemplatePickerOverlayComponent],
+  imports: [CommonModule, ReactiveFormsModule, TemplatePickerOverlayComponent, TargetUserOverlayComponent],
+  providers: [CampaignCreateFacade, CampaignTargetStore],
   templateUrl: './create-campaign.component.html',
   styleUrls: ['./create-campaign.component.css'],
 })
@@ -36,6 +40,7 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly commandFacade = inject(CampaignCommandFacade);
   private readonly toast = inject(ToastService);
+  public readonly facade = inject(CampaignCreateFacade);
 
   previewTab: 'push' | 'email' = 'push';
   campaignForm: FormGroup;
@@ -55,7 +60,6 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
       name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
       startDate: ['', [Validators.required]],
       startClock: ['', [Validators.required]],
-      audience: ['Chỉ User Active'],
       channel: ['Gửi cả Email & Push'],
       speed: [1000000, [Validators.required, Validators.min(1), Validators.max(1000000)]],
       template: [''],
@@ -191,43 +195,38 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
     return this.commandFacade.createCampaignMutation.isPending();
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     if (this.campaignForm.invalid) {
       this.campaignForm.markAllAsTouched();
       return;
     }
 
+    if (this.facade.activeTargetType() === 'SPECIFIC' && this.facade.includedIds().size === 0) {
+      this.toast.error('Lỗi Đối Tượng', 'Vui lòng chọn ít nhất 1 người dùng khi ở chế độ SPECIFIC.');
+      this.facade.setOverlayOpen(true);
+      return;
+    }
+
     const formValues = this.campaignForm.getRawValue();
-    const payload = this.mapToPayload(formValues);
 
-    this.commandFacade.createCampaignMutation.mutate(payload, {
-      onSuccess: () => {
-        this.router.navigate(['/campaigns']);
-      }
-    });
-  }
-
-  private mapToPayload(formValues: any): CreateCampaignRequest {
-    return {
+    const domainFormValue = {
       name: formValues.name,
-      targetType: this.mapAudience(formValues.audience),
       channel: this.mapChannel(formValues.channel),
       ratePerHour: Number(formValues.speed),
-      templateName: formValues.template || '',
+      templateName: formValues.template || null,
       pushTitle: formValues.notifTitle || '',
       pushBody: formValues.body || '',
       pushActionUrl: formValues.actionUrl || null,
       scheduledTime: this.createIsoDateTime(formValues.startDate, formValues.startClock),
       endTime: null
     };
-  }
 
-  private mapAudience(audienceLabel: string): 'ACTIVE' | 'ALL' | 'INACTIVE' {
-    switch (audienceLabel) {
-      case 'Tất cả User': return 'ALL';
-      case 'Nhóm cụ thể': return 'INACTIVE';
-      case 'Chỉ User Active':
-      default: return 'ACTIVE';
+    try {
+      await this.facade.submitCampaign(domainFormValue);
+      this.toast.success('Thành công', 'Chiến dịch đã được đưa vào hàng đợi!');
+      this.router.navigate(['/campaigns']);
+    } catch (err) {
+      this.toast.error('Lỗi', 'Không thể tạo chiến dịch. Hãy thử lại.');
     }
   }
 
@@ -236,7 +235,7 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
       case 'Gửi cả Email & Push': return ['EMAIL', 'PUSH'];
       case 'Chỉ Email': return ['EMAIL'];
       case 'Chỉ Push': return ['PUSH'];
-      default: return ['PUSH']; 
+      default: return ['PUSH'];
     }
   }
 

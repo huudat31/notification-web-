@@ -8,7 +8,7 @@ import { NotificationRealtimeEvent } from '../models/notification-event.model';
 export class RealtimeEventParserService {
   parseCampaignEvent(payload: string): CampaignRealtimeEvent | null {
     if (!payload) return null;
-    
+
     // Future proof: try JSON first
     try {
       const obj = JSON.parse(payload);
@@ -31,25 +31,13 @@ export class RealtimeEventParserService {
 
   parseNotificationEvent(payload: string): NotificationRealtimeEvent | null {
     if (!payload) return null;
-
     try {
       const obj = JSON.parse(payload);
-      if (obj && obj.notificationId && obj.status) {
+      if (obj && obj.action && obj.data && obj.data.id) {
         return obj as NotificationRealtimeEvent;
       }
     } catch {
-      // Fallback
-    }
-
-    const parts = payload.split(':');
-    if (parts.length === 2) {
-      const id = parseInt(parts[0], 10);
-      if (!isNaN(id)) {
-        return {
-          notificationId: id,
-          status: parts[1] as 'pending' | 'sent' | 'failed'
-        };
-      }
+      console.error('[EventParser] Failed to parse notification payload', payload);
     }
     return null;
   }

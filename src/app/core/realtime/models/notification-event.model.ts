@@ -1,4 +1,6 @@
+import { CampaignNotification } from '@data/model/campaign-notification.model';
+
 export interface NotificationRealtimeEvent {
-  notificationId: number;
-  status: 'pending' | 'sent' | 'failed';
+  action: 'CREATE' | 'UPDATE';
+  data: CampaignNotification;
 }

@@ -1,5 +1,5 @@
 <div class="campaign-page">
-    
+
     <div class="campaign-page__header">
         <button class="back-btn" (click)="goBack()">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -11,10 +11,10 @@
     </div>
 
     <div class="campaign-layout">
-        
+
         <div class="campaign-form-col">
             <form [formGroup]="campaignForm" (ngSubmit)="onSubmit()" class="campaign-card">
-                
+
                 <div class="campaign-card__section">
                     <div class="section-label">
                         <div class="section-label__bar"></div>
@@ -97,17 +97,25 @@
                     <div class="form-grid-3">
                         <div class="form-field">
                             <label class="form-label">Đối tượng <span class="required">*</span></label>
-                            <div class="select-wrap">
-                                <select class="form-select" formControlName="audience">
-                                    <option>Chỉ User Active</option>
-                                    <option>Tất cả User</option>
-                                    <option>Nhóm cụ thể</option>
-                                </select>
-                                <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="m6 9 6 6 6-6" />
+                            <button type="button" class="form-input btn-target-select"
+                                (click)="facade.setOverlayOpen(true)">
+                                <div class="target-select-content">
+                                    <span class="target-type-badge"
+                                        [class.specific]="facade.activeTargetType() === 'SPECIFIC'">
+                                        {{ facade.activeTargetType() }}
+                                    </span>
+                                    <span class="target-details" *ngIf="facade.activeTargetType() === 'SPECIFIC'">
+                                        ({{ facade.includedIds().size }} users selected)
+                                    </span>
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                                 </svg>
-                            </div>
+                            </button>
                         </div>
                         <div class="form-field">
                             <label class="form-label">Kênh gửi <span class="required">*</span></label>
@@ -130,7 +138,7 @@
                     </div>
                 </div>
 
-                
+
                 <div class="campaign-card__section campaign-card__section--no-border">
                     <div class="section-label">
                         <div class="section-label__bar"></div>
@@ -193,7 +201,7 @@
                     </div>
                 </div>
 
-                
+
                 <div class="campaign-card__footer">
                     <button type="button" class="btn-ghost" (click)="goBack()">Huỷ</button>
                     <button type="submit" class="btn-submit" [disabled]="isSubmitting">
@@ -204,9 +212,9 @@
             </form>
         </div>
 
-        
+
         <div class="campaign-sidebar-col">
-            
+
             <div class="preview-card">
                 <div class="preview-tabs">
                     <button class="preview-tab" [class.preview-tab--active]="previewTab === 'push'"
@@ -219,7 +227,7 @@
                     (selectTemplate)="onTemplateSelected($event)">
                 </app-template-picker-overlay>
                 <div class="preview-screen">
-                    
+
                     <div class="phone-mock" *ngIf="previewTab === 'push'">
                         <div class="phone-mock__bar">
                             <span>9:41</span>
@@ -243,12 +251,13 @@
                                 <span class="phone-notif__time">Vừa xong</span>
                             </div>
                             <p class="phone-notif__title">{{ previewTitle || 'Tiêu đề thông báo' }}</p>
-                            <p class="phone-notif__body">{{ previewBody || 'Nội dung thông báo sẽ hiển thị tại đây...' }}</p>
+                            <p class="phone-notif__body">{{ previewBody || 'Nội dung thông báo sẽ hiển thị tại đây...'
+                                }}</p>
                         </div>
                         <div class="phone-mock__home-bar"></div>
                     </div>
 
-                    
+
                     <div class="email-mock" *ngIf="previewTab === 'email'">
                         <div class="email-mock__header">
                             <div class="email-mock__from">
@@ -266,7 +275,8 @@
                                 {{ previewBody || 'Nội dung email sẽ hiển thị tại đây...' }}
                             </div>
                             <div class="email-footer" *ngIf="campaignForm.get('actionUrl')?.value">
-                                <a [href]="campaignForm.get('actionUrl')?.value" target="_blank" class="email-btn">Xem chi tiết</a>
+                                <a [href]="campaignForm.get('actionUrl')?.value" target="_blank" class="email-btn">Xem
+                                    chi tiết</a>
                             </div>
                         </div>
                     </div>
@@ -282,7 +292,7 @@
                 </div>
             </div>
 
-            
+
             <div class="reach-card">
                 <div class="reach-card__icon-wrap">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -309,3 +319,4 @@
         </div>
     </div>
 </div>
+<app-target-user-overlay></app-target-user-overlay>

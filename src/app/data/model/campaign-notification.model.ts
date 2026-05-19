@@ -7,6 +7,7 @@ export interface CampaignNotification {
   title: string;
   body: string;
   sentAt: string;
+  updatedAt?: string; // Used for realtime timestamp reconciliation
   isRead: boolean;
   isDeleted: boolean;
   count: number;
@@ -26,7 +27,11 @@ export interface CampaignStats {
   pending: number;
   total: number;
   channel?: 'PUSH' | 'EMAIL' | 'SMS' | 'MULTI';
+  push?: number;
+  email?: number;
+  sms?: number;
 }
+
 
 export interface PushNotificationDetail {
   id: number;

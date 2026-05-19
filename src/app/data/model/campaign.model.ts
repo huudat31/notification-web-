@@ -11,7 +11,7 @@ export interface Campaign {
     failed: number;
     sent: number;
   };
-  scheduledTime?: string;  
+  scheduledTime?: string;
   createdAt: string;
 }
 
@@ -37,15 +37,19 @@ export interface CampaignSearchResponse {
 
 export interface CreateCampaignRequest {
   name: string;
-  targetType: 'ACTIVE' | 'ALL' | 'INACTIVE';
-  channel: Array<'EMAIL' | 'PUSH'>;
+  targetType: 'ACTIVE' | 'ALL' | 'INACTIVE' | 'SPECIFIC' | 'RULE_BASED';
+  baseRule?: 'ACTIVE' | 'ALL' | 'INACTIVE';
+  targetUserIds?: number[];
+  includedUserIds?: number[];
+  excludedUserIds?: number[];
+  channel: Array<'EMAIL' | 'PUSH' | 'SMS'>;
   ratePerHour: number;
-  templateName: string;
-  pushTitle: string;
-  pushBody: string;
-  pushActionUrl: string | null;
+  templateName?: string | null;
+  pushTitle?: string;
+  pushBody?: string;
+  pushActionUrl?: string | null;
   scheduledTime: string;
-  endTime: string | null;
+  endTime?: string | null;
 }
 
 
