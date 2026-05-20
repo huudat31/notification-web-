@@ -1,4 +1,4 @@
-import { Component, inject, HostListener } from '@angular/core';
+import { Component, inject, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CampaignRepository } from '@data/repository/campaign.repository';
@@ -16,7 +16,7 @@ import { CampaignSkeletonComponent } from '../components/campaign-skeleton/campa
     CampaignCardComponent,
     CampaignSkeletonComponent
   ],
-  providers: [CampaignRepository],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './campaign-list.component.html',
   styleUrls: ['./campaign-list.component.css']
 })

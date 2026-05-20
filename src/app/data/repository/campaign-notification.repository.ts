@@ -1,18 +1,29 @@
-import { Injectable, inject, DestroyRef, signal, computed } from '@angular/core';
+import { Injectable, inject, DestroyRef, signal, computed, effect } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { Observable, firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
-import { CampaignApi } from '@data/api/campaign.api';
-import { Campaign } from '@data/model/campaign.model';
-import { CampaignNotification, CampaignNotificationFilter, CampaignStats } from '@data/model/campaign-notification.model';
-import { RealtimeEventBus } from '@core/realtime/services/realtime-event-bus.service';
-import { WebsocketService } from '@core/realtime/services/websocket.service';
-import { RealtimeEventParserService } from '@core/realtime/services/realtime-event-parser.service';
-import { NotificationStatusEvent, CampaignStatusEvent, BaseRealtimeEvent } from '@core/realtime/models/realtime-event.model';
+import { CampaignApi } from '../../data/api/campaign.api';
+import { Campaign } from '../../data/model/campaign.model';
+import { CampaignNotification, CampaignNotificationFilter, CampaignStats } from '../../data/model/campaign-notification.model';
 import { QueryClient, injectQuery, injectInfiniteQuery } from '@tanstack/angular-query-experimental';
-import { campaignKeys } from '@data/store/campaign/campaign-keys';
-import { NotificationCacheService } from '@data/store/campaign/notification-cache.service';
-import { CampaignCacheService } from '@data/store/campaign/campaign-cache.service';
+import { campaignKeys } from '../store/campaign/campaign-keys';
+import { WebsocketGateway } from '@core/realtime/services/websocket-gateway.service';
+import { RealtimeQueryRegistry } from '../store/campaign/realtime-query-registry.service';
+
+export interface CampaignOverviewVM {
+  total: number;
+  sent: number;
+  failed: number;
+  pending: number;
+  successRate: number;
+  health: {
+    level: 'healthy' | 'warning' | 'critical';
+    message: string;
+    description: string;
+  };
+  activeStatus: 'SENT' | 'FAILED' | 'PENDING' | '';
+  isEmpty: boolean;
+}
 
 export interface NotificationPageState {
   notifications: CampaignNotification[];
@@ -23,22 +34,20 @@ export interface NotificationPageState {
   totalElements: number;
 }
 
-@Injectable()
+@Injectable({
+  providedIn: 'root'
+})
 export class CampaignNotificationRepository {
   private readonly api = inject(CampaignApi);
   private readonly router = inject(Router);
-  private readonly eventBus = inject(RealtimeEventBus);
-  private readonly websocketService = inject(WebsocketService);
   private readonly queryClient = inject(QueryClient);
-  private readonly notifCacheService = inject(NotificationCacheService);
-  private readonly campaignCacheService = inject(CampaignCacheService);
+  private readonly websocketGateway = inject(WebsocketGateway);
+  private readonly registry = inject(RealtimeQueryRegistry);
   private readonly destroyRef = inject(DestroyRef);
 
   // --- UI State (Signals) ---
   readonly campaignId = signal<string | null>(null);
-
-  // page is now managed by TanStack Query, so filter state only needs business filters
-  readonly filters = signal<Omit<CampaignNotificationFilter, 'page'>>({ size: 10 });
+  readonly filters = signal<Omit<CampaignNotificationFilter, 'page'>>({ size: 20 });
   readonly activeNotificationId = signal<number | null>(null);
 
   // --- Initial Navigation State ---
@@ -57,7 +66,7 @@ export class CampaignNotificationRepository {
     return {
       queryKey: id ? campaignKeys.detail(id) : [],
       enabled: !!id,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 0, // Always refetch campaign to get fresh stats
       gcTime: 1000 * 60 * 30, // 30 minutes
       queryFn: async () => {
         if (this.initialCampaign && String(this.initialCampaign.id) === id) {
@@ -88,13 +97,12 @@ export class CampaignNotificationRepository {
       queryKey: id ? campaignKeys.notifications(id, filterParams) : [],
       enabled: !!id,
       initialPageParam: 0,
-      maxPages: 5, // Prevent memory leak for 100k+ notifications
+      maxPages: 10, // Prevent memory leak for large notification sets
       staleTime: 1000 * 60 * 2, // 2 minutes before background refetch
       gcTime: 1000 * 60 * 15, // 15 minutes before garbage collection
       queryFn: async ({ pageParam }) => {
         const fullFilters = { ...filterParams, page: pageParam as number };
-        const response = await firstValueFrom(this.api.getCampaignNotifications(id!, fullFilters as CampaignNotificationFilter));
-        return this.notifCacheService.patchWithRealtime(response);
+        return await firstValueFrom(this.api.getCampaignNotifications(id!, fullFilters as CampaignNotificationFilter));
       },
       getNextPageParam: (lastPage, allPages) => {
         if (!lastPage || lastPage.last) return undefined;
@@ -103,132 +111,188 @@ export class CampaignNotificationRepository {
     };
   });
 
-  // --- Derived Observables/Signals for backward compatibility ---
+  // --- Derived UI State computed cleanly from TanStack Query Cache ---
   readonly state = computed<NotificationPageState>(() => {
-    const q = this.notificationsQuery;
-    const data = q.data();
+    const id = this.campaignId();
+    if (!id) {
+      return {
+        notifications: [],
+        isLoading: false,
+        isFetchingNextPage: false,
+        error: null,
+        hasMore: false,
+        totalElements: 0
+      };
+    }
 
-    // Flatten accumulated pages
-    const flattenedNotifications = data?.pages.flatMap(page => page.content) || [];
-    // Total elements from the most recent page
-    const totalElements = data?.pages.length ? data.pages[data.pages.length - 1].totalElements : 0;
+    const query = this.notificationsQuery;
+    const data = query.data();
+    const notifications = data?.pages.flatMap(page => page.content) ?? [];
+
+    const isFetchingFirstPage = (query.isLoading() || query.isFetching()) && !query.isFetchingNextPage();
+    const isLoading = notifications.length === 0 ? isFetchingFirstPage : false;
+    const hasMore = query.hasNextPage();
+    const totalElements = data?.pages[0]?.totalElements ?? notifications.length;
 
     return {
-      notifications: flattenedNotifications,
-      isLoading: q.isLoading(),
-      isFetchingNextPage: q.isFetchingNextPage(),
-      error: q.isError() ? 'Failed to load notifications. Please retry.' : null,
-      hasMore: q.hasNextPage(),
+      notifications,
+      isLoading,
+      isFetchingNextPage: query.isFetchingNextPage(),
+      error: query.isError() ? 'Failed to load notifications. Please retry.' : null,
+      hasMore,
       totalElements
     };
   });
 
-  readonly stats = computed<CampaignStats>(() => {
+  readonly overviewVM = computed<CampaignOverviewVM>(() => {
+    const campaign = this.campaignQuery.data();
+    const filters = this.filters();
     const notifications = this.state().notifications;
-    let sent = 0, failed = 0, pending = 0;
-    let push = 0, email = 0, sms = 0;
 
-    notifications.forEach(n => {
-      const status = n.status.toUpperCase().trim();
-      if (status === 'SENT') sent++;
-      else if (status === 'FAILED') failed++;
-      else if (status === 'PENDING') pending++;
-
-      const ch = n.channel.toUpperCase().trim();
-      if (ch === 'PUSH') push++;
-      else if (ch === 'EMAIL') email++;
-      else if (ch === 'SMS') sms++;
-    });
-
-    const total = notifications.length;
-    let detectedChannel: 'PUSH' | 'EMAIL' | 'SMS' | 'MULTI' = 'MULTI';
-    if (total > 0) {
-      const hasPush = push > 0;
-      const hasEmail = email > 0;
-      const hasSms = sms > 0;
-      if (hasPush && !hasEmail && !hasSms) detectedChannel = 'PUSH';
-      else if (!hasPush && hasEmail && !hasSms) detectedChannel = 'EMAIL';
-      else if (!hasPush && !hasEmail && hasSms) detectedChannel = 'SMS';
+    if (!campaign) {
+      return {
+        total: 0,
+        sent: 0,
+        failed: 0,
+        pending: 0,
+        successRate: 0,
+        health: {
+          level: 'healthy',
+          message: 'No Campaign Selected',
+          description: 'Please select a campaign to view details.'
+        },
+        activeStatus: '',
+        isEmpty: true
+      };
     }
 
-    return { sent, failed, pending, total, channel: detectedChannel, push, email, sms };
+    // --- Compute live stats reactively from the state notifications ---
+    let liveSent = 0;
+    let liveFailed = 0;
+    let livePending = 0;
+    const hasLiveData = notifications.length > 0;
+
+    if (hasLiveData) {
+      notifications.forEach(notification => {
+        if (!notification) return;
+        const status = notification.status?.trim().toUpperCase();
+        if (status === 'SENT') liveSent++;
+        else if (status === 'FAILED') liveFailed++;
+        else if (status === 'PENDING') livePending++;
+      });
+    }
+
+    // Use live store counts when available; fall back to backend campaign.sentStatus
+    const sent = hasLiveData ? liveSent : (campaign.sentStatus?.sent ?? 0);
+    const failed = hasLiveData ? liveFailed : (campaign.sentStatus?.failed ?? 0);
+    const pending = hasLiveData ? livePending : (campaign.sentStatus?.pending ?? 0);
+
+    // Total: prefer backend totalTarget (all recipients), supplement with store counts
+    const total = campaign.totalTarget || (campaign.sentStatus?.sent ?? 0) + (campaign.sentStatus?.failed ?? 0) + (campaign.sentStatus?.pending ?? 0) || (sent + failed + pending);
+    const successRate = total > 0 ? Math.round((sent / total) * 100) : 0;
+
+    // Domain-aware Health Calculation
+    let level: 'healthy' | 'warning' | 'critical' = 'healthy';
+    let message = 'Campaign is Healthy';
+    let description = `${successRate}% notifications delivered successfully.`;
+
+    const failureRate = total > 0 ? failed / total : 0;
+
+    if (total === 0) {
+      level = 'healthy';
+      message = 'No notifications sent yet';
+      description = 'Create your first notification to start tracking delivery health.';
+    } else if (failureRate > 0.05) {
+      level = 'critical';
+      message = 'Critical failure rate detected';
+      description = `${failed} failed deliveries (${Math.round(failureRate * 100)}%) require immediate operational attention.`;
+    } else if (failed > 0) {
+      level = 'warning';
+      message = 'Failed deliveries detected';
+      description = `${failed} delivery issue${failed > 1 ? 's' : ''} require review. Success rate is at ${successRate}%.`;
+    } else if (pending > 0) {
+      // Check if scheduled time or creation is stale (e.g. 10 minutes staleness threshold)
+      const scheduledTimeStr = campaign.scheduledTime || campaign.createdAt;
+      const scheduledTime = new Date(scheduledTimeStr).getTime();
+      const isStale = (Date.now() - scheduledTime) > 10 * 60 * 1000;
+
+      if (isStale) {
+        level = 'warning';
+        message = 'Transmission stalling detected';
+        description = `${pending} notification${pending > 1 ? 's' : ''} stuck in queue for more than 10 minutes.`;
+      } else {
+        level = 'healthy';
+        message = 'Deliveries in progress';
+        description = `${pending} notification${pending > 1 ? 's' : ''} currently in processing queue.`;
+      }
+    } else {
+      level = 'healthy';
+      message = 'All deliveries completed';
+      description = `Campaign successfully processed all ${total} notifications with a ${successRate}% delivery rate.`;
+    }
+
+    return {
+      total,
+      sent,
+      failed,
+      pending,
+      successRate,
+      health: {
+        level,
+        message,
+        description
+      },
+      activeStatus: (filters.status as any) || '',
+      isEmpty: total === 0
+    };
   });
 
-  // Backward compatible observable wrappers for the component
+  // Backward compatible observable wrappers for OnPush / components
   readonly campaign$ = toObservable(this.campaignQuery.data);
   readonly state$ = toObservable(this.state);
-  readonly stats$ = toObservable(this.stats);
+  readonly overviewVM$ = toObservable(this.overviewVM);
 
   constructor() {
-    this.initRealtimeSubscription();
-    this.initReconnectRecovery();
-  }
-
-  private initRealtimeSubscription(): void {
-    // 1. Subscribe to Global Notifications Topic (Batch Mode)
-    this.eventBus.observeTopic('/topic/notifications')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (eventsBatch: BaseRealtimeEvent[]) => {
-          const currentCampaignId = this.campaignId();
-          if (currentCampaignId && eventsBatch.length > 0) {
-            // Filter only NOTIFICATION_STATUS_CHANGED events
-            const notifEvents = eventsBatch.filter(e => e.type === 'NOTIFICATION_STATUS_CHANGED') as NotificationStatusEvent[];
-            if (notifEvents.length > 0) {
-              this.notifCacheService.updateNotificationsBatch(currentCampaignId, notifEvents);
-            }
-          }
-        },
-        error: (err) => console.error('[Realtime] Subscription error in global notifications topic:', err)
-      });
-
-    // 2. Subscribe to Dynamic Campaign Topic (Batch Mode)
-    toObservable(this.campaignId).subscribe(id => {
+    // Register active notification query key in the registry reactively
+    effect((onCleanup) => {
+      const id = this.campaignId();
+      const filterParams = this.filters();
       if (id) {
-        this.eventBus.observeTopic(`/topic/campaign/${id}`)
-          .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe({
-            next: (eventsBatch: BaseRealtimeEvent[]) => {
-              const campEvents = eventsBatch.filter(e => e.type === 'CAMPAIGN_STATUS_CHANGED') as CampaignStatusEvent[];
-              // Process the last campaign event in the batch (status updates overwrite each other)
-              if (campEvents.length > 0) {
-                const latestCampEvent = campEvents[campEvents.length - 1];
-                console.log('[Realtime] Campaign update received:', latestCampEvent);
-                this.campaignCacheService.updateCampaignStatusInCache(latestCampEvent);
-              }
-            }
-          });
+        const queryKey = campaignKeys.notifications(id, filterParams);
+        this.registry.registerNotificationQuery(id, queryKey);
+        onCleanup(() => {
+          this.registry.unregisterNotificationQuery(id, queryKey);
+        });
       }
     });
   }
 
-  private initReconnectRecovery(): void {
-    // 3. Offline Recovery
-    this.websocketService.reconnect$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        const id = this.campaignId();
-        if (id) {
-          console.warn('[Repository] Reconnected! Triggering query invalidation to sync gap events.');
-          this.notifCacheService.recoverOfflineState(id);
-        }
-      });
-  }
-
   setCampaignId(id: string): void {
+    const previousId = this.campaignId();
+
+    // Unsubscribe from previous campaign topic when switching campaigns
+    if (previousId && previousId !== id) {
+      this.websocketGateway.unsubscribeFromCampaign(previousId);
+    }
+
     this.campaignId.set(id);
+
+    // Subscribe to the campaign-specific WS topic for real-time notification updates
+    this.websocketGateway.subscribeToCampaign(id);
   }
 
   setActiveNotificationId(id: number | null): void {
     this.activeNotificationId.set(id);
   }
 
+  /** Called by component OnDestroy to clean up campaign WS topic subscription */
+  cleanupCampaign(id: string): void {
+    this.websocketGateway.unsubscribeFromCampaign(id);
+  }
+
   updateFilters(partialFilter: Partial<CampaignNotificationFilter>): void {
     const current = this.filters();
-
-    // Create new filter without the page property since it's handled by infinite query
     const { page, ...filteredPartial } = partialFilter as any;
-
     this.filters.set({
       ...current,
       ...filteredPartial
@@ -239,6 +303,80 @@ export class CampaignNotificationRepository {
     if (this.notificationsQuery.hasNextPage() && !this.notificationsQuery.isFetchingNextPage()) {
       this.notificationsQuery.fetchNextPage();
     }
+  }
+
+  /**
+   * Transactional Optimistic status patching with rollback support
+   */
+  applyOptimisticStatus(notificationId: number, status: 'PENDING' | 'SENT' | 'FAILED'): CampaignNotification | null {
+    const id = this.campaignId();
+    if (!id) return null;
+
+    let snapshot: CampaignNotification | null = null;
+    
+    // Find the item first
+    const activeQueries = this.queryClient.getQueryCache().findAll({
+      predicate: (query) =>
+        query.queryKey[0] === 'campaigns' &&
+        query.queryKey[1] === 'detail' &&
+        query.queryKey[2] === id &&
+        query.queryKey[3] === 'notifications'
+    });
+
+    for (const query of activeQueries) {
+      const data = this.queryClient.getQueryData<any>(query.queryKey);
+      if (data && data.pages) {
+        for (const page of data.pages) {
+          const found = page.content.find((x: CampaignNotification) => x.id === notificationId);
+          if (found) {
+            snapshot = { ...found };
+            break;
+          }
+        }
+      }
+      if (snapshot) break;
+    }
+
+    // Also update TanStack Query cache to stay in sync
+    this.updateQueryCacheItem(notificationId, status);
+
+    return snapshot;
+  }
+
+  rollbackStatus(notificationId: number, snapshot: CampaignNotification | null) {
+    const id = this.campaignId();
+    if (!id || !snapshot) return;
+
+    this.updateQueryCacheItem(notificationId, snapshot.status);
+  }
+
+  private updateQueryCacheItem(notificationId: number, status: 'PENDING' | 'SENT' | 'FAILED') {
+    const campaignId = this.campaignId();
+    if (!campaignId) return;
+
+    const activeQueries = this.queryClient.getQueryCache().findAll({
+      predicate: (query) =>
+        query.queryKey[0] === 'campaigns' &&
+        query.queryKey[1] === 'detail' &&
+        query.queryKey[2] === campaignId &&
+        query.queryKey[3] === 'notifications'
+    });
+
+    activeQueries.forEach(query => {
+      this.queryClient.setQueryData<any>(query.queryKey, (oldData: any) => {
+        if (!oldData || !oldData.pages) return oldData;
+        const newPages = oldData.pages.map((page: any) => {
+          const newContent = page.content.map((item: CampaignNotification) => {
+            if (item.id === notificationId) {
+              return { ...item, status, updatedAt: new Date().toISOString() };
+            }
+            return item;
+          });
+          return { ...page, content: newContent };
+        });
+        return { ...oldData, pages: newPages };
+      });
+    });
   }
 
   retryNotification(notificationId: number): Observable<unknown> {

@@ -85,4 +85,9 @@ export class CampaignApi {
   getNotificationDetails(notificationId: number): Observable<any> {
     return this.http.get(`${this.BASE_URL}/notifications/${notificationId}/details`);
   }
+
+  getCampaignNotificationsDelta(campaignId: string, sinceSequence: number): Observable<CampaignNotification[]> {
+    const params = new HttpParams().set('sinceSequence', sinceSequence.toString());
+    return this.http.get<CampaignNotification[]>(`${this.BASE_URL}/${campaignId}/notifications/delta`, { params });
+  }
 }

@@ -1,22 +1,12 @@
-import { Injectable, inject, DestroyRef } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { BehaviorSubject, Observable, of, Subject, merge } from 'rxjs';
-import {
-  switchMap,
-  scan,
-  catchError,
-  distinctUntilChanged,
-  shareReplay,
-  map,
-  startWith
-} from 'rxjs/operators';
+import { Injectable, inject, signal, computed, effect } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { Observable, firstValueFrom } from 'rxjs';
 import { CampaignApi } from '@data/api/campaign.api';
 import { Campaign, CampaignSearchParams, CampaignSearchResponse } from '@data/model/campaign.model';
-import { WebsocketService } from '@core/realtime/services/websocket.service';
-import { RealtimeEventParserService } from '@core/realtime/services/realtime-event-parser.service';
-import { CampaignRealtimeEvent } from '@core/realtime/models/campaign-event.model';
-import { QueryClient } from '@tanstack/angular-query-experimental';
+import { QueryClient, injectInfiniteQuery } from '@tanstack/angular-query-experimental';
 import { campaignKeys } from '@data/store/campaign/campaign-keys';
+import { CampaignLocalStorageService } from '@data/store/campaign/campaign-local-storage.service';
+import { RealtimeQueryRegistry } from '@data/store/campaign/realtime-query-registry.service';
 
 export interface CampaignPageState {
   campaigns: Campaign[];
@@ -42,28 +32,85 @@ const INITIAL_FILTER: FilterState = {
   size: 50
 };
 
-const INITIAL_STATE: CampaignPageState = {
-  campaigns: [],
-  isLoading: true,
-  error: null,
-  hasMore: true,
-  totalElements: 0
-};
-
-@Injectable()
+@Injectable({
+  providedIn: 'root'
+})
 export class CampaignRepository {
   private readonly api = inject(CampaignApi);
-  private readonly websocketService = inject(WebsocketService);
-  private readonly parserService = inject(RealtimeEventParserService);
   private readonly queryClient = inject(QueryClient);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly localStorage = inject(CampaignLocalStorageService);
+  private readonly registry = inject(RealtimeQueryRegistry);
 
-  private readonly filtersSubject = new BehaviorSubject<FilterState>(INITIAL_FILTER);
-  private readonly realtimeUpdate$ = new Subject<CampaignRealtimeEvent>();
+  // --- UI State (Signals) ---
+  readonly filters = signal<FilterState>(INITIAL_FILTER);
 
-  private readonly apiResponse$ = this.filtersSubject.pipe(
-    distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr)),
-    switchMap((filters) => {
+  readonly campaignsQuery = injectInfiniteQuery(() => {
+    const filters = this.filters();
+    const params: CampaignSearchParams = {
+      page: filters.page,
+      size: filters.size,
+      sortDirection: filters.sortDirection,
+      ...(filters.campaignName && { campaignName: filters.campaignName }),
+      ...(filters.status && { status: filters.status })
+    };
+
+    return {
+      queryKey: campaignKeys.list(params),
+      initialPageParam: 0,
+      staleTime: 1000 * 60 * 2, // 2 minutes
+      gcTime: 1000 * 60 * 15, // 15 minutes
+      queryFn: async ({ pageParam }) => {
+        const fullParams = { ...params, page: pageParam as number };
+        const response = await firstValueFrom(this.api.searchCampaigns(fullParams));
+        
+        // Save to IndexedDB/local storage for offline hydration
+        if (pageParam === 0) {
+          this.localStorage.saveCampaigns(response.content);
+        } else {
+          // Merge with existing campaigns in IndexedDB
+          const existing = await this.localStorage.getAllCampaigns();
+          const merged = [...existing, ...response.content];
+          const uniqueMerged = merged.filter((c, i, self) => self.findIndex(x => x.id === c.id) === i);
+          this.localStorage.saveCampaigns(uniqueMerged);
+        }
+
+        return response;
+      },
+      getNextPageParam: (lastPage, allPages) => {
+        if (!lastPage || lastPage.last) return undefined;
+        return allPages.length;
+      }
+    };
+  });
+
+  // --- Derived UI State computed cleanly from the TanStack Query Cache ---
+  readonly campaignListVM = computed<CampaignPageState>(() => {
+    const query = this.campaignsQuery;
+    const data = query.data();
+    
+    const campaigns = data?.pages.flatMap(page => page.content) ?? [];
+    const isLoading = query.isLoading() || (query.isFetching() && !query.isFetchingNextPage() && campaigns.length === 0);
+    const hasMore = query.hasNextPage();
+    const totalElements = data?.pages[0]?.totalElements ?? campaigns.length;
+    
+    return {
+      campaigns,
+      isLoading,
+      error: query.isError() ? 'Không thể tải dữ liệu. Vui lòng thử lại.' : null,
+      hasMore,
+      totalElements
+    };
+  });
+
+  // Backward compatible observable wrappers for OnPush / components
+  readonly state$: Observable<CampaignPageState> = toObservable(this.campaignListVM);
+
+  constructor() {
+    this.hydrateFromOffline();
+    
+    // Register active list query key in the registry reactively
+    effect((onCleanup) => {
+      const filters = this.filters();
       const params: CampaignSearchParams = {
         page: filters.page,
         size: filters.size,
@@ -71,153 +118,52 @@ export class CampaignRepository {
         ...(filters.campaignName && { campaignName: filters.campaignName }),
         ...(filters.status && { status: filters.status })
       };
-
-      return this.api.searchCampaigns(params).pipe(
-        map((response): { type: 'API_RESPONSE'; response: CampaignSearchResponse; page: number } => ({
-          type: 'API_RESPONSE',
-          response,
-          page: filters.page
-        })),
-        catchError(() => of({ type: 'API_RESPONSE' as const, response: null as any, page: 0 }))
-      );
-    })
-  );
-
-  readonly state$: Observable<CampaignPageState> = merge(
-    this.apiResponse$,
-    this.realtimeUpdate$.pipe(
-      map((event): { type: 'REALTIME_UPDATE'; event: CampaignRealtimeEvent } => ({
-        type: 'REALTIME_UPDATE',
-        event
-      }))
-    )
-  ).pipe(
-    scan(
-      (
-        acc: CampaignPageState,
-        action:
-          | { type: 'API_RESPONSE'; response: CampaignSearchResponse | null; page: number }
-          | { type: 'REALTIME_UPDATE'; event: CampaignRealtimeEvent }
-      ): CampaignPageState => {
-        if (action.type === 'API_RESPONSE') {
-          const { response, page } = action;
-          if (response === null || !response) {
-            return {
-              ...acc,
-              isLoading: false,
-              error: 'Không thể tải dữ liệu. Vui lòng thử lại.'
-            };
-          }
-
-          const newCampaigns = page === 0
-            ? response.content
-            : [...acc.campaigns, ...response.content];
-
-          return {
-            campaigns: newCampaigns,
-            isLoading: false,
-            error: null,
-            hasMore: !response.last,
-            totalElements: response.totalElements
-          };
-        } else {
-          // REALTIME_UPDATE
-          const { event } = action;
-          let changed = false;
-          const updatedCampaigns = acc.campaigns.map(c => {
-            if (String(c.id) === String(event.campaignId)) {
-              if (c.status === event.status) return c;
-              changed = true;
-              return { ...c, status: event.status };
-            }
-            return c;
-          });
-
-          if (!changed) return acc;
-          return {
-            ...acc,
-            campaigns: updatedCampaigns
-          };
-        }
-      },
-      INITIAL_STATE
-    ),
-    startWith(INITIAL_STATE),
-    shareReplay(1)
-  );
-
-  constructor() {
-    this.initRealtimeSubscription();
-  }
-
-  private initRealtimeSubscription(): void {
-    console.log('[Realtime] CampaignListComponent active, subscribing to /topic/campaigns');
-    this.websocketService.watchTopic('/topic/campaigns')
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        map(payload => this.parserService.parseCampaignEvent(payload))
-      )
-      .subscribe({
-        next: (event) => {
-          if (event) {
-            console.log('[Realtime] Campaign update received:', event);
-            // 1. Update local state
-            this.realtimeUpdate$.next(event);
-            // 2. Synchronize with TanStack Query Cache
-            this.updateQueryCache(event);
-          }
-        },
-        error: (err) => console.error('[Realtime] Subscription error in campaigns topic:', err)
+      const queryKey = campaignKeys.list(params);
+      this.registry.registerListQuery(queryKey);
+      onCleanup(() => {
+        this.registry.unregisterListQuery(queryKey);
       });
-  }
-
-  private updateQueryCache(event: CampaignRealtimeEvent): void {
-    const queryCache = this.queryClient.getQueryCache();
-    const activeQueries = queryCache.findAll({ queryKey: campaignKeys.lists() });
-
-    activeQueries.forEach(query => {
-      const state = this.queryClient.getQueryState(query.queryKey);
-      if (!state || state.status !== 'success') return;
-
-      const oldData = this.queryClient.getQueryData<CampaignSearchResponse>(query.queryKey);
-      if (!oldData || !oldData.content) return;
-
-      let changed = false;
-      const updatedContent = oldData.content.map(item => {
-        if (String(item.id) === String(event.campaignId)) {
-          if (item.status === event.status) return item;
-          changed = true;
-          return { ...item, status: event.status };
-        }
-        return item;
-      });
-
-      if (changed) {
-        this.queryClient.setQueryData(query.queryKey, {
-          ...oldData,
-          content: updatedContent
-        });
-      }
     });
+  }
 
-    const detailKey = campaignKeys.detail(event.campaignId);
-    const detailState = this.queryClient.getQueryState(detailKey);
-    if (detailState && detailState.status === 'success') {
-      const detailOldData = this.queryClient.getQueryData<any>(detailKey);
-      if (detailOldData && detailOldData.status !== event.status) {
-        this.queryClient.setQueryData(detailKey, {
-          ...detailOldData,
-          status: event.status
-        });
+  private async hydrateFromOffline() {
+    try {
+      const offlineCampaigns = await this.localStorage.getAllCampaigns();
+      if (offlineCampaigns && offlineCampaigns.length > 0) {
+        const queryKey = campaignKeys.list(INITIAL_FILTER);
+        // Only set if there is no query data already loaded
+        if (!this.queryClient.getQueryData(queryKey)) {
+          this.queryClient.setQueryData(queryKey, {
+            pages: [{
+              content: offlineCampaigns,
+              totalElements: offlineCampaigns.length,
+              totalPages: 1,
+              size: INITIAL_FILTER.size,
+              number: 0,
+              last: true,
+              first: true
+            }],
+            pageParams: [0]
+          });
+        }
       }
+    } catch (e) {
+      console.warn('[Offline] Failed to hydrate campaigns from local storage:', e);
     }
   }
 
+  /** Force reload the campaign list from the server */
+  forceReload(): void {
+    this.queryClient.invalidateQueries({ queryKey: campaignKeys.lists() });
+    this.filters.update(f => ({ ...f, page: 0 }));
+    this.campaignsQuery.refetch();
+  }
+
   updateFilters(partial: Partial<Omit<FilterState, 'size'>>): void {
-    const current = this.filtersSubject.value;
+    const current = this.filters();
     const isPaginationChange = 'page' in partial;
 
-    this.filtersSubject.next({
+    this.filters.set({
       ...current,
       ...partial,
       page: isPaginationChange ? (partial.page ?? 0) : 0
@@ -225,14 +171,12 @@ export class CampaignRepository {
   }
 
   loadNextPage(): void {
-    const current = this.filtersSubject.value;
-    this.filtersSubject.next({
-      ...current,
-      page: current.page + 1
-    });
+    if (this.campaignsQuery.hasNextPage() && !this.campaignsQuery.isFetchingNextPage()) {
+      this.campaignsQuery.fetchNextPage();
+    }
   }
 
   retry(): void {
-    this.filtersSubject.next({ ...this.filtersSubject.value });
+    this.campaignsQuery.refetch();
   }
 }

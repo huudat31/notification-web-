@@ -1,5 +1,5 @@
 import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, RouteReuseStrategy } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideAngularQuery, QueryClient } from '@tanstack/angular-query-experimental';
@@ -13,6 +13,7 @@ import { serviceInterceptor } from '@core/interceptors/service.interceptor';
 import { AuthInitService } from '@core/auth/auth-init.service';
 import { initializeRealtime } from '@core/realtime/initializer/realtime.initializer';
 import { RealtimeSyncService } from '@core/realtime/services/realtime-sync.service';
+import { CustomRouteReuseStrategy } from './common/routing/custom-route-reuse';
 
 export function initializeApp(authInit: AuthInitService) {
   return (): Promise<void> => authInit.init();
@@ -31,6 +32,10 @@ export const appConfig: ApplicationConfig = {
     ),
     provideAnimations(),
     provideAngularQuery(new QueryClient()),
+    {
+      provide: RouteReuseStrategy,
+      useClass: CustomRouteReuseStrategy
+    },
     {
       provide: APP_INITIALIZER,
       useFactory: initializeApp,

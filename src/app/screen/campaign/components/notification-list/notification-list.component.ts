@@ -1,98 +1,92 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CampaignNotification } from '@data/model/campaign-notification.model';
 
 @Component({
   selector: 'app-notification-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ScrollingModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="table-container shadow-sm">
-      <table class="modern-table">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Channel</th>
-            <th>Status</th>
-            <th>Title & Message</th>
-            <th>Sent At</th>
-            <th class="text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- LOADING SKELETONS -->
-          <ng-container *ngIf="isLoading && notifications.length === 0">
-            <tr *ngFor="let i of [1,2,3,4,5,6,7,8]" class="skeleton-row">
-              <td colspan="6">
-                <div class="skeleton-line"></div>
-              </td>
-            </tr>
-          </ng-container>
+      <!-- HEADER -->
+      <div class="table-header">
+        <div class="th col-user">User</div>
+        <div class="th col-channel">Channel</div>
+        <div class="th col-status">Status</div>
+        <div class="th col-message">Title & Message</div>
+        <div class="th col-sent">Sent At</div>
+        <div class="th col-actions text-right">Actions</div>
+      </div>
 
-          <!-- DATA ROWS -->
-          <tr *ngFor="let n of notifications; trackBy: trackById" 
-              class="data-row" 
-              (click)="onViewDetails(n)">
-            <td>
-              <div class="user-cell">
-                <div class="avatar">{{ n.userName.charAt(0).toUpperCase() }}</div>
-                <div class="user-info">
-                  <span class="user-name">{{ n.userName }}</span>
-                  <span class="user-id">ID: {{ n.userId }}</span>
-                </div>
-              </div>
-            </td>
-            <td>
-              <span class="badge" [ngClass]="'badge--' + n.channel.toLowerCase()">
-                {{ n.channel }}
-              </span>
-            </td>
-            <td>
-              <span class="badge" [ngClass]="'badge--' + n.status.toLowerCase()">
-                {{ n.status }}
-              </span>
-            </td>
-            <td>
-              <div class="content-cell">
-                <span class="content-title">{{ n.title }}</span>
-                <span class="content-body">{{ n.body }}</span>
-              </div>
-            </td>
-            <td>
-              <div class="time-cell">
-                <span class="date">{{ n.sentAt | date:'MMM d, yyyy' }}</span>
-                <span class="time">{{ n.sentAt | date:'HH:mm' }}</span>
-              </div>
-            </td>
-            <td class="text-right">
-              <div class="actions-group">
-                <button class="action-btn" (click)="$event.stopPropagation(); onViewDetails(n)" title="View Details">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                </button>
-                <button class="action-btn retry" [disabled]="n.status.trim().toUpperCase() !== 'FAILED'" (click)="$event.stopPropagation(); onRetry(n)" [title]="(n.status.trim().toUpperCase() === 'FAILED') ? 'Retry' : 'Cannot retry ' + n.status.toLowerCase()">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><polyline points="21 3 21 8 16 8"></polyline></svg>
-                </button>
-              </div>
-            </td>
-          </tr>
+      <!-- SKELETON LOADING -->
+      <div *ngIf="isLoading && notifications.length === 0" class="skeleton-container">
+        <div *ngFor="let i of [1,2,3,4,5,6,7,8]" class="skeleton-row">
+          <div class="skeleton-line"></div>
+        </div>
+      </div>
 
-          <!-- EMPTY STATE -->
-          <tr *ngIf="!isLoading && notifications.length === 0">
-            <td colspan="6">
-              <div class="empty-state">
-                <div class="empty-icon">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                </div>
-                <h3>No notifications found</h3>
-                <p>Try adjusting your filters or keyword.</p>
+      <!-- VIRTUAL VIEWPORT -->
+      <cdk-virtual-scroll-viewport [itemSize]="72" class="viewport" (scrolledIndexChange)="listScrolled.emit($event)">
+        <!-- DATA ROWS -->
+        <div *cdkVirtualFor="let n of notifications; trackBy: trackById" 
+             class="data-row" 
+             (click)="onViewDetails(n)">
+          <div class="td col-user">
+            <div class="user-cell">
+              <div class="avatar">{{ n.userName.charAt(0).toUpperCase() }}</div>
+              <div class="user-info">
+                <span class="user-name">{{ n.userName }}</span>
+                <span class="user-id">ID: {{ n.userId }}</span>
               </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+          </div>
+          <div class="td col-channel">
+            <span class="badge" [ngClass]="'badge--' + n.channel.toLowerCase()">
+              {{ n.channel }}
+            </span>
+          </div>
+          <div class="td col-status">
+            <span class="badge" [ngClass]="'badge--' + n.status.toLowerCase()">
+              {{ n.status }}
+            </span>
+          </div>
+          <div class="td col-message">
+            <div class="content-cell">
+              <span class="content-title">{{ n.title }}</span>
+              <span class="content-body" [title]="n.body">{{ n.body }}</span>
+            </div>
+          </div>
+          <div class="td col-sent">
+            <div class="time-cell">
+              <span class="date">{{ n.sentAt | date:'MMM d, yyyy' }}</span>
+              <span class="time">{{ n.sentAt | date:'HH:mm' }}</span>
+            </div>
+          </div>
+          <div class="td col-actions text-right">
+            <div class="actions-group">
+              <button *ngIf="n.status.trim().toUpperCase() === 'FAILED'" 
+                      class="action-btn retry" 
+                      (click)="$event.stopPropagation(); onRetry(n)" 
+                      title="Retry">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><polyline points="21 3 21 8 16 8"></polyline></svg>
+              </button>
+            </div>
+          </div>
+        </div>
 
-      <!-- LOAD MORE -->
+        <!-- EMPTY STATE -->
+        <div *ngIf="!isLoading && notifications.length === 0" class="empty-state">
+          <div class="empty-icon">
+             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+          <h3>No notifications found</h3>
+          <p>Try adjusting your filters or keyword.</p>
+        </div>
+      </cdk-virtual-scroll-viewport>
+
+      <!-- LOAD MORE/FETCHING SPINNER -->
       <div class="load-more" *ngIf="isLoading && notifications.length > 0">
         <div class="spinner"></div>
         <span>Loading more results...</span>
@@ -104,44 +98,67 @@ import { CampaignNotification } from '@data/model/campaign-notification.model';
       background: white;
       border-radius: 1rem;
       border: 1px solid #e2e8f0;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
     .shadow-sm { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
 
-    .modern-table {
+    .viewport {
+      height: 550px;
       width: 100%;
-      border-collapse: collapse;
-      text-align: left;
+      background: white;
     }
-    .modern-table th {
+
+    /* Flexbox Table Layout */
+    .table-header {
+      display: flex;
       background: #f8fafc;
-      padding: 1rem 1.5rem;
-      font-size: 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
       font-weight: 700;
       color: #64748b;
+      font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      border-bottom: 1px solid #e2e8f0;
-      position: sticky;
-      top: 0;
-      z-index: 10;
+      user-select: none;
     }
-    .modern-table td {
-      padding: 1rem 1.5rem;
+
+    .data-row {
+      display: flex;
+      align-items: center;
+      height: 72px;
       border-bottom: 1px solid #f1f5f9;
-      vertical-align: middle;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
     }
+    .data-row:hover { background: #f8fafc; }
+    .data-row:active { background: #f1f5f9; }
+
+    .th, .td {
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* Column Widths Definition */
+    .col-user { flex: 1.8; min-width: 160px; }
+    .col-channel { flex: 0.8; min-width: 90px; }
+    .col-status { flex: 0.8; min-width: 90px; }
+    .col-message { flex: 3.2; min-width: 250px; }
+    .col-sent { flex: 1.4; min-width: 130px; }
+    .col-actions { flex: 0.8; min-width: 80px; justify-content: flex-end; }
 
     /* User Cell */
     .user-cell {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.75rem;
     }
     .avatar {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       background: linear-gradient(135deg, #7c3aed, #4f46e5);
       color: white;
       border-radius: 50%;
@@ -149,21 +166,22 @@ import { CampaignNotification } from '@data/model/campaign-notification.model';
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
+      flex-shrink: 0;
     }
     .user-info { display: flex; flex-direction: column; gap: 0.125rem; }
-    .user-name { font-weight: 700; color: #1e293b; font-size: 0.875rem; }
-    .user-id { font-size: 0.75rem; color: #94a3b8; }
+    .user-name { font-weight: 700; color: #1e293b; font-size: 0.8125rem; }
+    .user-id { font-size: 0.6875rem; color: #94a3b8; }
 
     /* Content Cell */
     .content-cell {
       display: flex;
       flex-direction: column;
-      max-width: 300px;
+      max-width: 100%;
     }
-    .content-title { font-weight: 700; color: #334155; font-size: 0.875rem; margin-bottom: 0.125rem; }
+    .content-title { font-weight: 700; color: #334155; font-size: 0.8125rem; margin-bottom: 0.125rem; }
     .content-body { 
-      font-size: 0.8125rem; 
+      font-size: 0.75rem; 
       color: #64748b; 
       white-space: nowrap;
       overflow: hidden;
@@ -172,22 +190,14 @@ import { CampaignNotification } from '@data/model/campaign-notification.model';
 
     /* Time Cell */
     .time-cell { display: flex; flex-direction: column; }
-    .date { font-size: 0.875rem; font-weight: 600; color: #334155; }
-    .time { font-size: 0.75rem; color: #94a3b8; }
-
-    /* Rows */
-    .data-row {
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .data-row:hover { background: #f8fafc; }
-    .data-row:active { background: #f1f5f9; }
+    .date { font-size: 0.8125rem; font-weight: 600; color: #334155; }
+    .time { font-size: 0.6875rem; color: #94a3b8; }
 
     /* Badges */
     .badge {
-      font-size: 0.65rem;
+      font-size: 0.625rem;
       font-weight: 800;
-      padding: 0.25rem 0.625rem;
+      padding: 0.1875rem 0.5rem;
       border-radius: 2rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -201,12 +211,12 @@ import { CampaignNotification } from '@data/model/campaign-notification.model';
     .badge--pending { background: #fff7ed; color: #ea580c; }
 
     /* Actions */
-    .text-right { text-align: right; }
+    .text-right { justify-content: flex-end; text-align: right; }
     .actions-group { display: flex; gap: 0.5rem; justify-content: flex-end; }
     .action-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 0.5rem;
+      width: 28px;
+      height: 28px;
+      border-radius: 0.375rem;
       border: 1px solid #e2e8f0;
       background: white;
       color: #64748b;
@@ -218,12 +228,22 @@ import { CampaignNotification } from '@data/model/campaign-notification.model';
     }
     .action-btn:hover { background: #f1f5f9; color: #1e293b; border-color: #cbd5e1; }
     .action-btn.retry:hover { color: #7c3aed; border-color: #ddd6fe; background: #f5f3ff; }
-    .action-btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 
-    /* Skeleton */
-    .skeleton-row td { padding: 1.5rem; }
+    /* Skeletons */
+    .skeleton-container {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .skeleton-row {
+      height: 48px;
+      display: flex;
+      align-items: center;
+    }
     .skeleton-line {
       height: 12px;
+      width: 100%;
       background: #f1f5f9;
       border-radius: 1rem;
       animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -237,11 +257,13 @@ import { CampaignNotification } from '@data/model/campaign-notification.model';
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       gap: 1rem;
+      width: 100%;
     }
     .empty-icon { opacity: 0.5; }
-    .empty-state h3 { font-size: 1.125rem; font-weight: 700; color: #1e293b; margin: 0; }
-    .empty-state p { font-size: 0.875rem; color: #64748b; margin: 0; }
+    .empty-state h3 { font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; }
+    .empty-state p { font-size: 0.8125rem; color: #64748b; margin: 0; }
 
     /* Load More */
     .load-more {
@@ -249,16 +271,16 @@ import { CampaignNotification } from '@data/model/campaign-notification.model';
       align-items: center;
       justify-content: center;
       gap: 0.75rem;
-      padding: 1.5rem;
+      padding: 1rem;
       background: #f8fafc;
       color: #64748b;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 600;
       border-top: 1px solid #e2e8f0;
     }
     .spinner {
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       border: 2px solid #e2e8f0;
       border-top-color: #7c3aed;
       border-radius: 50%;
@@ -273,6 +295,7 @@ export class NotificationListComponent {
 
   @Output() viewDetails = new EventEmitter<CampaignNotification>();
   @Output() retryNotification = new EventEmitter<CampaignNotification>();
+  @Output() listScrolled = new EventEmitter<number>();
 
   trackById(index: number, item: CampaignNotification) {
     return item.id;

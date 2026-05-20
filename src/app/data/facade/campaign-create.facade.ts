@@ -8,6 +8,7 @@ import { CampaignTargetStore } from '../stores/campaign-target.store';
 import { UserSearchRepository } from '../api/user-search.repository';
 import { CampaignPayloadBuilder } from '../domain/campaign-payload.builder';
 import { CampaignApi } from '../api/campaign.api';
+import { CampaignCommandFacade } from './campaign-command.facade';
 
 @Injectable({ providedIn: 'root' })
 export class CampaignCreateFacade {
@@ -15,6 +16,7 @@ export class CampaignCreateFacade {
   private readonly userApi = inject(UserSearchRepository);
   private readonly campaignApi = inject(CampaignApi);
   private readonly payloadBuilder = inject(CampaignPayloadBuilder);
+  private readonly commandFacade = inject(CampaignCommandFacade);
 
   // Expose purely UI-driven state
   readonly isOverlayOpen = this.store.isOverlayOpen;
@@ -33,14 +35,24 @@ export class CampaignCreateFacade {
 
   // TanStack Infinite Query Setup (Memory Leak Safe)
   readonly usersQuery = injectInfiniteQuery(() => ({
-    queryKey: ['users-search', this.store.searchKeyword()],
-    queryFn: ({ pageParam = 0 }) => lastValueFrom(
-      this.userApi.searchUsers({
-        keyword: this.store.searchKeyword(),
-        page: pageParam as number,
-        size: 50
-      })
-    ),
+    queryKey: ['users-search', this.store.searchKeyword(), this.store.baseTargetRule()],
+    queryFn: ({ pageParam = 0 }) => {
+      const rule = this.store.baseTargetRule();
+      // Map base rule to status filter: only ACTIVE and INACTIVE have direct status equivalents
+      const statusFilter: 'ACTIVE' | 'INACTIVE' | '' =
+        rule === 'ACTIVE' ? 'ACTIVE'
+        : rule === 'INACTIVE' ? 'INACTIVE'
+        : '';
+
+      return lastValueFrom(
+        this.userApi.searchUsers({
+          keyword: this.store.searchKeyword(),
+          status: statusFilter,
+          page: pageParam as number,
+          size: 50
+        })
+      );
+    },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.last ? undefined : lastPage.number + 1,
     gcTime: 1000 * 60 * 5, // 5 minutes Garbage Collection
@@ -82,7 +94,7 @@ export class CampaignCreateFacade {
 
     const payload = this.payloadBuilder.buildCreatePayload(formValue, selectionState as any);
 
-    // Convert observable to promise to maintain clean component boundary
-    await lastValueFrom(this.campaignApi.createCampaign(payload));
+    // Convert mutation flow to promise to maintain clean component boundary
+    await this.commandFacade.createCampaignMutation.mutateAsync(payload);
   }
 }

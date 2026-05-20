@@ -1,8 +1,9 @@
-import { Component, EventEmitter, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Output, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CampaignNotificationFilter } from '@data/model/campaign-notification.model';
 
 @Component({
   selector: 'app-notification-filter-bar',
@@ -63,7 +64,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
       padding: 1rem 1.25rem;
       border-radius: 0.75rem;
       border: 1px solid #e2e8f0;
-      margin-bottom: 1.5rem;
+      margin-bottom: 0.875rem;
       gap: 1.5rem;
       position: sticky;
       top: 1rem;
@@ -199,6 +200,16 @@ export class NotificationFilterBarComponent {
     channel: [''],
     status: ['']
   });
+
+  @Input() set activeFilters(val: Omit<CampaignNotificationFilter, 'page'> | null) {
+    if (val) {
+      this.filterForm.patchValue({
+        keyword: val.keyword || '',
+        channel: val.channel || '',
+        status: val.status || ''
+      }, { emitEvent: false });
+    }
+  }
 
   constructor() {
     this.filterForm.valueChanges.pipe(

@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-# NotificationWeb
+# Notification Web
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 17.3.17.
 
@@ -26,8 +25,8 @@ Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To u
 ## Further help
 
 To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
-=======
-# Notification web
+
+# Notification Web GitLab Docs
 
 
 
@@ -120,4 +119,3 @@ For open source projects, say how it is licensed.
 
 ## Project status
 If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
->>>>>>> b271c96399c3566c6673dac61683fe5545f6c004

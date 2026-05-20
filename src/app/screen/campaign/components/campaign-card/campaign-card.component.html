@@ -48,15 +48,15 @@
     <div class="stat-details">
       <div class="stat-item">
         <span class="stat-label">Sent</span>
-        <span class="stat-value sent">{{ formatNumber(campaign.sentStatus.sent) }}</span>
+        <span class="stat-value sent">{{ formatNumber(campaign.sentStatus?.sent ?? 0) }}</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Failed</span>
-        <span class="stat-value failed">{{ formatNumber(campaign.sentStatus.failed) }}</span>
+        <span class="stat-value failed">{{ formatNumber(campaign.sentStatus?.failed ?? 0) }}</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Pending</span>
-        <span class="stat-value pending">{{ formatNumber(campaign.sentStatus.pending) }}</span>
+        <span class="stat-value pending">{{ formatNumber(campaign.sentStatus?.pending ?? 0) }}</span>
       </div>
     </div>
   </div>
