@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CampaignStats } from '@data/model/campaign-notification.model';
+import { CampaignStats } from '@data/models/campaign.model';
 
 @Component({
   selector: 'app-campaign-overview-cards',

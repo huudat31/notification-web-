@@ -2,7 +2,7 @@ import { Component, inject, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer } from '@angular/platform-browser';
-import { AuthFacade } from '@data/facade/auth.facade';
+import { AuthService } from '@core/auth/auth.service';
 
 interface NavItem {
   label: string;
@@ -19,8 +19,8 @@ interface NavItem {
 })
 export class SidebarComponent {
   private readonly sanitizer = inject(DomSanitizer);
-  private readonly authFacade = inject(AuthFacade);
-  readonly user = this.authFacade.currentUser;
+  private readonly authService = inject(AuthService);
+  readonly user = this.authService.currentUser;
 
   navItems: NavItem[] = [
     {
@@ -59,7 +59,7 @@ export class SidebarComponent {
   );
 
   logout(): void {
-    this.authFacade.logout();
+    this.authService.logout();
   }
 
   get userInitials(): string {

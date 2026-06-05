@@ -1,7 +1,7 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, inject, NgZone } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { AuthFacade } from '@data/facade/auth.facade';
+import { AuthService } from '@core/auth/auth.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -13,14 +13,14 @@ import { environment } from '../../../../environments/environment';
 })
 export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
-  private readonly authFacade = inject(AuthFacade);
+  private readonly authService = inject(AuthService);
   private readonly ngZone = inject(NgZone);
 
   loginForm: FormGroup;
   rememberMe = false;
 
-  readonly isLoading = this.authFacade.isLoading;
-  readonly errorMessage = this.authFacade.error;
+  readonly isLoading = this.authService.isLoading;
+  readonly errorMessage = this.authService.error;
 
   private googleInitialized = false;
   private pollIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -78,7 +78,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
       client_id: environment.googleClientId,
       callback: (response: any) => {
         this.ngZone.run(() => {
-          this.authFacade.loginWithGoogle(response.credential).subscribe();
+          this.authService.loginWithGoogle(response.credential).subscribe();
         });
       },
       use_fedcm_for_prompt: false,

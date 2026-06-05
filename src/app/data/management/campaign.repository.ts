@@ -9,8 +9,8 @@ import {
   map,
   startWith
 } from 'rxjs/operators';
-import { CampaignApi } from '@data/api/campaign.api';
-import { Campaign, CampaignSearchParams, CampaignSearchResponse } from '@data/model/campaign.model';
+import { CampaignService } from '@core/campaign/campaign.service';
+import { Campaign, CampaignSearchParams, CampaignSearchResponse } from '@data/models/campaign.model';
 
 export interface CampaignPageState {
   campaigns: Campaign[];
@@ -46,7 +46,7 @@ const INITIAL_STATE: CampaignPageState = {
 
 @Injectable()
 export class CampaignRepository {
-  private readonly api = inject(CampaignApi);
+  private readonly campaignService = inject(CampaignService);
 
   private readonly filtersSubject = new BehaviorSubject<FilterState>(INITIAL_FILTER);
 
@@ -61,7 +61,7 @@ export class CampaignRepository {
         ...(filters.status && { status: filters.status })
       };
 
-      return this.api.searchCampaigns(params).pipe(
+      return this.campaignService.searchCampaigns(params).pipe(
         map((response): { response: CampaignSearchResponse; page: number } => ({
           response,
           page: filters.page

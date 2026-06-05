@@ -1,7 +1,7 @@
 import { Component, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { CampaignRepository } from '@data/repository/campaign.repository';
+import { CampaignRepository } from '@data/management/campaign.repository';
 import { CampaignFilterBarComponent, FilterChangeEvent } from '../components/campaign-filter-bar/campaign-filter-bar.component';
 import { CampaignCardComponent } from '../components/campaign-card/campaign-card.component';
 import { CampaignSkeletonComponent } from '../components/campaign-skeleton/campaign-skeleton.component';

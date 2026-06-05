@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CampaignNotification } from '@data/model/campaign-notification.model';
+import { CampaignNotification } from '@data/models/campaign.model';
 
 @Component({
   selector: 'app-notification-list',

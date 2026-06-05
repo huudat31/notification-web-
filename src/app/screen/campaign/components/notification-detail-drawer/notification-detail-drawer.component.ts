@@ -6,8 +6,8 @@ import {
   PushNotificationDetail,
   EmailNotificationDetail,
   SmsNotificationDetail
-} from '@data/model/campaign-notification.model';
-import { CampaignNotificationRepository } from '@data/repository/campaign-notification.repository';
+} from '@data/models/campaign.model';
+import { CampaignNotificationRepository } from '@data/management/campaign-notification.repository';
 import { ToastService } from '@core/services/toast.service';
 
 @Component({

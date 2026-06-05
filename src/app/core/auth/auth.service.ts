@@ -1,61 +1,166 @@
-import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpBackend } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, throwError } from 'rxjs';
-import { tap, catchError, finalize } from 'rxjs/operators';
-import { AuthApi } from '@data/api/auth.api';
-import { AuthStore } from '@data/store/auth/auth.store';
-import { AuthTokenService } from './auth-token.service';
+import { Observable, throwError, BehaviorSubject } from 'rxjs';
+import { tap, catchError, finalize, filter, take, switchMap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import { BroadcastService } from '@core/services/broadcast.service';
 import { LoggerService } from '@core/services/logger.service';
-import { AuthResponse, GoogleLoginRequest, TokenPayload, User } from '@data/model/auth.model';
+import { AuthResponse, GoogleLoginRequest, TokenPayload, User } from '@data/models/auth.model';
+import { Injectable, inject, signal, computed } from '@angular/core';
+
+export interface AuthState {
+  user: User | null;
+  accessToken: string | null;
+  isAuthenticated: boolean;
+  isInitialized: boolean;
+  isRestoringSession: boolean;
+  isRefreshing: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly authApi = inject(AuthApi);
-  private readonly authStore = inject(AuthStore);
-  private readonly authSession = inject(AuthTokenService);
+  private readonly httpWithoutInterceptors = new HttpClient(inject(HttpBackend));
+  private readonly BASE_URL = `${environment.apiBaseUrl}/api/auth`;
   private readonly router = inject(Router);
   private readonly broadcast = inject(BroadcastService);
   private readonly logger = inject(LoggerService);
 
+  private readonly REFRESH_TOKEN_KEY = 'refresh_token';
+  private readonly DEVICE_ID_KEY = environment.deviceIdKey;
+
+  private isRefreshing = false;
+  private refreshSubject = new BehaviorSubject<string | null>(null);
+
+  private readonly state = signal<AuthState>({
+    user: null,
+    accessToken: null,
+    isAuthenticated: false,
+    isInitialized: false,
+    isRestoringSession: false,
+    isRefreshing: false,
+    isLoading: false,
+    error: null,
+  });
+
+  readonly user = computed(() => this.state().user);
+  readonly currentUser = this.user;
+  readonly accessToken = computed(() => this.state().accessToken);
+  readonly isAuthenticated = computed(() => this.state().isAuthenticated);
+  readonly isInitialized = computed(() => this.state().isInitialized);
+  readonly isRestoringSession = computed(() => this.state().isRestoringSession);
+  readonly isRefreshingState = computed(() => this.state().isRefreshing);
+  readonly isLoading = computed(() => this.state().isLoading);
+  readonly error = computed(() => this.state().error);
+
+  setAuth(user: User, accessToken: string): void {
+    this.state.update(s => ({
+      ...s,
+      user,
+      accessToken,
+      isAuthenticated: true,
+      error: null,
+      isRestoringSession: false,
+    }));
+  }
+
+  setAccessToken(accessToken: string): void {
+    this.state.update(s => ({ ...s, accessToken, isAuthenticated: true }));
+  }
+
+  setInitialized(isInitialized: boolean): void {
+    this.state.update(s => ({ ...s, isInitialized }));
+  }
+
+  setRestoring(isRestoring: boolean): void {
+    this.state.update(s => ({ ...s, isRestoringSession: isRestoring }));
+  }
+
+  setRefreshing(isRefreshing: boolean): void {
+    this.state.update(s => ({ ...s, isRefreshing }));
+  }
+
+  setLoading(isLoading: boolean): void {
+    this.state.update(s => ({ ...s, isLoading }));
+  }
+
+  setError(error: string | null): void {
+    this.state.update(s => ({ ...s, error }));
+  }
+
+  clear(): void {
+    this.state.update(s => ({
+      ...s,
+      user: null,
+      accessToken: null,
+      isAuthenticated: false,
+      isRestoringSession: false,
+      isRefreshing: false,
+      error: null,
+    }));
+  }
+
+  // --- TOKEN / DEVICE ID MANAGEMENT ---
+  getRefreshToken(): string | null {
+    return sessionStorage.getItem(this.REFRESH_TOKEN_KEY);
+  }
+
+  setRefreshToken(token: string): void {
+    sessionStorage.setItem(this.REFRESH_TOKEN_KEY, token);
+  }
+
+  getDeviceId(): string {
+    let deviceId = localStorage.getItem(this.DEVICE_ID_KEY);
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem(this.DEVICE_ID_KEY, deviceId);
+    }
+    return deviceId;
+  }
+
+  setDeviceId(deviceId: string): void {
+    localStorage.setItem(this.DEVICE_ID_KEY, deviceId);
+  }
+
   loginGoogleAdmin(idToken: string): Observable<AuthResponse> {
-    this.authStore.setLoading(true);
-    this.authStore.setError(null);
+    this.setLoading(true);
+    this.setError(null);
 
     const request: GoogleLoginRequest = {
       idToken,
       fcmToken: 'WEB_TEST_TOKEN',
-      deviceId: this.authSession.getDeviceId(),
+      deviceId: this.getDeviceId(),
       deviceType: 'WEB',
       deviceName: this.getDeviceName(),
     };
 
-    return this.authApi.loginGoogleAdmin(request).pipe(
+    return this.httpWithoutInterceptors.post<AuthResponse>(`${this.BASE_URL}/google-admin`, request).pipe(
       tap(response => {
         const user = this.extractUserFromResponse(response, idToken);
-        this.authStore.setAuth(user, response.accessToken);
-        this.authSession.setRefreshToken(response.refreshToken);
+        this.setAuth(user, response.accessToken);
+        this.setRefreshToken(response.refreshToken);
         this.logger.log('LOGIN_SUCCESS', { userId: user?.id, name: user?.name });
         void this.router.navigate(['/dashboard']);
       }),
       catchError(error => {
         const msg = error?.error?.message ?? 'Lỗi đăng nhập Google';
-        this.authStore.setError(msg);
+        this.setError(msg);
         this.logger.error('LOGIN_FAILED', { status: error?.status });
         return throwError(() => error);
       }),
-      finalize(() => this.authStore.setLoading(false)),
+      finalize(() => this.setLoading(false)),
     );
   }
 
   refreshSession(refreshToken: string): Observable<AuthResponse> {
-    const deviceId = this.authSession.getDeviceId();
+    const deviceId = this.getDeviceId();
     
-    return this.authApi.refreshToken({ refreshToken, deviceId }).pipe(
+    return this.httpWithoutInterceptors.post<AuthResponse>(`${this.BASE_URL}/refresh`, { refreshToken, deviceId }).pipe(
       tap(response => {
         const user = this.extractUserFromResponse(response, response.accessToken);
-        this.authStore.setAuth(user, response.accessToken);
-        this.authSession.setRefreshToken(response.refreshToken);
+        this.setAuth(user, response.accessToken);
+        this.setRefreshToken(response.refreshToken);
         this.logger.log('REFRESH_SUCCESS', { source: 'AUTH_SERVICE' });
       }),
       catchError(error => {
@@ -67,8 +172,8 @@ export class AuthService {
   }
 
   logout(): void {
-    const deviceId = this.authSession.getDeviceId();
-    this.authApi.logout(deviceId).pipe(
+    const deviceId = this.getDeviceId();
+    this.httpWithoutInterceptors.post<void>(`${this.BASE_URL}/logout`, { deviceId }).pipe(
       finalize(() => this.clearSession(true))
     ).subscribe({
       error: () => {  }
@@ -76,8 +181,9 @@ export class AuthService {
   }
 
   clearSession(redirect: boolean = true): void {
-    this.authStore.clear();
-    this.authSession.clear();
+    this.clear();
+    sessionStorage.removeItem(this.REFRESH_TOKEN_KEY);
+    localStorage.removeItem('auth_user');
     this.broadcast.broadcastLogout();
     if (redirect) {
       void this.router.navigate(['/login']);
@@ -122,5 +228,53 @@ export class AuthService {
     } catch (e: any) {
       return null;
     }
+  }
+
+  loginWithGoogle(idToken: string): Observable<AuthResponse> {
+    return this.loginGoogleAdmin(idToken);
+  }
+
+  forceLogout(): void {
+    this.clearSession(true);
+  }
+
+  refresh(): Observable<string | null> {
+    if (this.isRefreshing) {
+      return this.refreshSubject.pipe(
+        filter(token => token !== undefined), 
+        take(1)
+      );
+    }
+
+    this.isRefreshing = true;
+    this.refreshSubject.next(undefined as any); 
+
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      this.isRefreshing = false;
+      this.refreshSubject.next(null);
+      this.forceLogout();
+      return new Observable<null>(subscriber => {
+        subscriber.next(null);
+        subscriber.complete();
+      });
+    }
+
+    return this.refreshSession(refreshToken).pipe(
+      switchMap(response => {
+        this.isRefreshing = false;
+        this.refreshSubject.next(response.accessToken);
+        return new Observable<string>(subscriber => {
+          subscriber.next(response.accessToken);
+          subscriber.complete();
+        });
+      })
+    );
+  }
+
+  handleRefreshFailure(): void {
+    this.isRefreshing = false;
+    this.refreshSubject.next(null);
+    this.forceLogout();
   }
 }

@@ -1,6 +1,6 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { AuthFacade } from '@data/facade/auth.facade';
+import { AuthService } from '@core/auth/auth.service';
 
 const AUTH_EXCLUDED_URLS = [
   '/refresh',
@@ -13,8 +13,8 @@ export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  const authFacade = inject(AuthFacade);
-  const accessToken = authFacade.accessToken();
+  const authService = inject(AuthService);
+  const accessToken = authService.accessToken();
 
   if (!accessToken) {
     return next(req);

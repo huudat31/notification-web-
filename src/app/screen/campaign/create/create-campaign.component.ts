@@ -4,8 +4,8 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractContro
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { ToastService } from '@core/services/toast.service';
-import { CampaignCommandFacade } from '@data/facade/campaign-command.facade';
-import { CreateCampaignRequest, CampaignTemplate } from '@data/model/campaign.model';
+import { CampaignService } from '@core/campaign/campaign.service';
+import { CreateCampaignRequest, CampaignTemplate } from '@data/models/campaign.model';
 import { TemplatePickerOverlayComponent } from '../components/template-picker-overlay/template-picker-overlay.component';
 
 export function futureDateTimeValidator(): ValidatorFn {
@@ -34,7 +34,7 @@ export function futureDateTimeValidator(): ValidatorFn {
 export class CreateCampaignComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
-  private readonly commandFacade = inject(CampaignCommandFacade);
+  private readonly campaignService = inject(CampaignService);
   private readonly toast = inject(ToastService);
 
   previewTab: 'push' | 'email' = 'push';
@@ -188,7 +188,7 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
   }
 
   get isSubmitting(): boolean {
-    return this.commandFacade.createCampaignMutation.isPending();
+    return this.campaignService.createCampaignMutation.isPending();
   }
 
   onSubmit(): void {
@@ -200,7 +200,7 @@ export class CreateCampaignComponent implements OnInit, OnDestroy {
     const formValues = this.campaignForm.getRawValue();
     const payload = this.mapToPayload(formValues);
 
-    this.commandFacade.createCampaignMutation.mutate(payload, {
+    this.campaignService.createCampaignMutation.mutate(payload, {
       onSuccess: () => {
         this.router.navigate(['/campaigns']);
       }

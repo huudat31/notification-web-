@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { AuthFacade } from '@data/facade/auth.facade';
+import { AuthService } from '@core/auth/auth.service';
 import { BroadcastService } from '@core/services/broadcast.service';
 
 @Component({
@@ -12,13 +12,13 @@ import { BroadcastService } from '@core/services/broadcast.service';
   styles: [`:host { display: block; height: 100vh; }`],
 })
 export class ApplicationComponent implements OnInit, OnDestroy {
-  private readonly authFacade = inject(AuthFacade);
+  private readonly authService = inject(AuthService);
   private readonly broadcast = inject(BroadcastService);
   private logoutSub?: Subscription;
 
   ngOnInit(): void {
     this.logoutSub = this.broadcast.listenForLogout().subscribe(() => {
-      this.authFacade.forceLogout();
+      this.authService.forceLogout();
     });
   }
 

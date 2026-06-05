@@ -2,8 +2,8 @@ import { Component, OnInit, OnDestroy, Output, EventEmitter, ElementRef, ViewChi
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Observable, combineLatest, map, startWith, catchError, of, finalize } from 'rxjs';
-import { CampaignApi } from '@data/api/campaign.api';
-import { CampaignTemplate } from '@data/model/campaign.model';
+import { CampaignService } from '@core/campaign/campaign.service';
+import { CampaignTemplate } from '@data/models/campaign.model';
 
 @Component({
   selector: 'app-template-picker-overlay',
@@ -18,7 +18,7 @@ export class TemplatePickerOverlayComponent implements OnInit, OnDestroy {
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
 
-  private readonly campaignApi = inject(CampaignApi);
+  private readonly campaignService = inject(CampaignService);
 
   searchControl = new FormControl('');
 
@@ -54,7 +54,7 @@ export class TemplatePickerOverlayComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.hasError = false;
 
-    this.templates$ = this.campaignApi.getAllTemplates().pipe(
+    this.templates$ = this.campaignService.getAllTemplates().pipe(
       catchError(() => {
         this.hasError = true;
         return of([]);

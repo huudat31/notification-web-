@@ -5,7 +5,6 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideAngularQuery, QueryClient } from '@tanstack/angular-query-experimental';
 import { routes } from './application.routes';
 
-import { errorInterceptor } from '@core/interceptors/error.interceptor';
 import { authTokenInterceptor } from '@core/interceptors/auth-token.interceptor';
 import { refreshInterceptor } from '@core/interceptors/refresh.interceptor';
 import { serviceInterceptor } from '@core/interceptors/service.interceptor';
@@ -13,6 +12,8 @@ import { serviceInterceptor } from '@core/interceptors/service.interceptor';
 import { AuthInitService } from '@core/auth/auth-init.service';
 import { initializeRealtime } from '@core/realtime/initializer/realtime.initializer';
 import { RealtimeSyncService } from '@core/realtime/services/realtime-sync.service';
+
+import { CampaignService } from '@core/campaign/campaign.service';
 
 export function initializeApp(authInit: AuthInitService) {
   return (): Promise<void> => authInit.init();
@@ -23,7 +24,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(
       withInterceptors([
-        errorInterceptor,
         authTokenInterceptor,
         refreshInterceptor,
         serviceInterceptor
@@ -31,6 +31,7 @@ export const appConfig: ApplicationConfig = {
     ),
     provideAnimations(),
     provideAngularQuery(new QueryClient()),
+    CampaignService,
     {
       provide: APP_INITIALIZER,
       useFactory: initializeApp,

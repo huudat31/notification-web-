@@ -9,10 +9,8 @@ import {
   shareReplay
 } from 'rxjs/operators';
 import { Router } from '@angular/router';
-import { CampaignApi } from '@data/api/campaign.api';
-import { Campaign } from '@data/model/campaign.model';
-import { CampaignNotification, CampaignNotificationFilter, CampaignStats } from '@data/model/campaign-notification.model';
-import { PagedResponse } from '@data/model/paged-response.model';
+import { CampaignService } from '@core/campaign/campaign.service';
+import { Campaign, CampaignNotification, CampaignNotificationFilter, CampaignStats, PagedResponse } from '@data/models/campaign.model';
 
 export interface NotificationPageState {
   notifications: CampaignNotification[];
@@ -32,7 +30,7 @@ const INITIAL_STATE: NotificationPageState = {
 
 @Injectable()
 export class CampaignNotificationRepository {
-  private readonly api = inject(CampaignApi);
+  private readonly campaignService = inject(CampaignService);
   private readonly router = inject(Router);
 
   private readonly campaignId$ = new BehaviorSubject<string | null>(null);
@@ -55,7 +53,7 @@ export class CampaignNotificationRepository {
         return of(this.initialCampaign);
       }
 
-      return this.api.getCampaignById(id).pipe(
+      return this.campaignService.getCampaignById(id).pipe(
         catchError(err => {
           console.warn('Failed to load campaign info (perhaps 403 Forbidden). Using fallback mock.', err);
           return of({
@@ -93,7 +91,7 @@ export class CampaignNotificationRepository {
     switchMap(([id, filters]) => {
       if (!id) return of(INITIAL_STATE);
 
-      return this.api.getCampaignNotifications(id, filters).pipe(
+      return this.campaignService.getCampaignNotifications(id, filters).pipe(
         map((curr: PagedResponse<CampaignNotification>): { data: PagedResponse<CampaignNotification>; page: number } => ({
           data: curr,
           page: filters.page
@@ -156,10 +154,10 @@ export class CampaignNotificationRepository {
   }
 
   retryNotification(notificationId: number): Observable<unknown> {
-    return this.api.retryNotification(notificationId);
+    return this.campaignService.retryNotification(notificationId);
   }
 
   getNotificationDetails(notificationId: number): Observable<any> {
-    return this.api.getNotificationDetails(notificationId);
+    return this.campaignService.getNotificationDetails(notificationId);
   }
 }

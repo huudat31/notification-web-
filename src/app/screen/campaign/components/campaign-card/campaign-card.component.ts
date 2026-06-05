@@ -1,7 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { Campaign } from '@data/model/campaign.model';
+import { Campaign } from '@data/models/campaign.model';
 
 @Component({
   selector: 'app-campaign-card',

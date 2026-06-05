@@ -3,11 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { QueryClient } from '@tanstack/angular-query-experimental';
 import { WebsocketService } from './websocket.service';
 import { RealtimeEventParserService } from './realtime-event-parser.service';
-import { campaignKeys } from '@data/store/campaign/campaign-keys';
-import { CampaignSearchResponse } from '@data/model/campaign.model';
-import { CampaignNotification } from '@data/model/campaign-notification.model';
-import { PagedResponse } from '@data/model/paged-response.model';
-import { CampaignQueryFacade } from '@data/facade/campaign-query.facade';
+import { CampaignSearchResponse, CampaignNotification, PagedResponse } from '@data/models/campaign.model';
+import { CampaignService, campaignKeys } from '@core/campaign/campaign.service';
 
 @Injectable({
   providedIn: 'root'
@@ -17,7 +14,7 @@ export class RealtimeSyncService {
   private readonly parserService = inject(RealtimeEventParserService);
   private readonly queryClient = inject(QueryClient);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly campaignFacade = inject(CampaignQueryFacade);
+  private readonly campaignService = inject(CampaignService);
 
   private initialized = false;
 
@@ -89,7 +86,7 @@ export class RealtimeSyncService {
   }
 
   private updateNotificationCache(event: any): void {
-    const campaignId = this.campaignFacade.notificationCampaignId();
+    const campaignId = this.campaignService.notificationCampaignId();
     if (!campaignId) return;
 
     const queryCache = this.queryClient.getQueryCache();

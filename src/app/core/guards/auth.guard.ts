@@ -1,15 +1,15 @@
 import { inject } from '@angular/core';
 import { Router, CanActivateFn, UrlTree } from '@angular/router';
-import { AuthFacade } from '@data/facade/auth.facade';
+import { AuthService } from '@core/auth/auth.service';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { filter, switchMap, take, map, Observable } from 'rxjs';
 
 export const authGuard: CanActivateFn = (route, state): Observable<boolean | UrlTree> => {
-  const authFacade = inject(AuthFacade);
+  const authService = inject(AuthService);
   const router = inject(Router);
 
-  const isInitialized$ = toObservable(authFacade.isInitialized);
-  const isAuthenticated$ = toObservable(authFacade.isAuthenticated);
+  const isInitialized$ = toObservable(authService.isInitialized);
+  const isAuthenticated$ = toObservable(authService.isAuthenticated);
 
   return isInitialized$.pipe(
     filter(isInit => isInit === true),
